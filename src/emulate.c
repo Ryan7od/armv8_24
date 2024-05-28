@@ -36,7 +36,8 @@ extern int64_t read64(Register* reg);
 //2MB of memory
 unsigned char memory[2097152] = { 0 };
 struct GeneralRegisters gRegisters = { { 0 } };
-struct SpecialRegisters sRegisters= { 0, 0, { false, true, false, false } };
+struct SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
+#define zeroReg &sRegisters.Zero
 
 int main(int argc, char **argv) {
   //Check 1 or 2 arguments
@@ -84,10 +85,12 @@ void printEnd(FILE *ptr) {
 }
 
 void write32(Register* reg, int32_t val) {
+  if (reg == zeroReg) return;
   *reg = ((int64_t) val) << 32;
 }
 
 void write64(Register* reg, int64_t val) {
+  if (reg == zeroReg) return;
   *reg = val;
 }
 
