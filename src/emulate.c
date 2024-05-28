@@ -73,9 +73,10 @@ int main(int argc, char **argv) {
 //Prints out final states
 void printEnd(FILE *ptr) {
   for (int i = 0; i < 32; i++) {
-    fprintf(ptr, "X%i = %lx\n", i, gRegisters[i]);
+    if (i < 10) fprintf(ptr, "X%i  = %016lx\n", i, gRegisters[i]);
+    else fprintf(ptr, "X%i = %016lx\n", i, gRegisters[i]);
   }
-  fprintf(ptr, "PC = %lx\n", sRegisters.PC);
+  fprintf(ptr, "PC  = %016lx\n", sRegisters.PC);
   fprintf(ptr, "PSTATE: ");
   if(sRegisters.pstate.N) fprintf(ptr, "N"); else fprintf(ptr, "-");
   if(sRegisters.pstate.Z) fprintf(ptr, "Z"); else fprintf(ptr, "-");
