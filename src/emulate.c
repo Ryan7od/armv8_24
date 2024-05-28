@@ -53,19 +53,19 @@ int main(int argc, char **argv) {
   }
 
   //Read in file
-  FILE *inPtr = fopen(argv[1], "rb");
+  FILE *inPtr;
+  inPtr = inPtr = fopen(argv[1], "rb");
   unsigned char buffer[4] = { 0 };
   unsigned char* memPtr = memory;
   if(inPtr == NULL) return -1;
-  while (fread(&buffer, sizeof(buffer), 1, inPtr)) {
-    *memPtr++ = buffer[3];
-    *memPtr++ = buffer[2];
-    *memPtr++ = buffer[1];
-    *memPtr++ = buffer[0];
+  while (fread(buffer, sizeof(buffer), 1, inPtr)) {
+    for (int i = 0; i < 4; i++) {
+      *memPtr++ = buffer[i];
+    }
   }
 
-  for(int i = 0; i < 8; i++) {
-    printf("%u ", memory[i]);
+  for(int i = 0; i < 12; i++) {
+    printf("%x ", memory[i]);
     if ((i+1)%4 == 0) printf("\n");
   }
 
