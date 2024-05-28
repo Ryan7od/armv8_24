@@ -76,20 +76,24 @@ int main(int argc, char **argv) {
   while(instruction != 0x8a000000) {
     //Switch case to send to different operation handlers
     switch (instruction & 0b00011110000000000000000000000000) {
+      //100x Data Processing (Immediate)
       case (0b00010000000000000000000000000000):
       case (0b00010010000000000000000000000000): {
         dataProcessingImmHandler(instruction);
       }
+      //x101 Data Processing (Register)
       case (0b00001010000000000000000000000000):
       case (0b00011010000000000000000000000000): {
         dataProcessingRegHandler(instruction);
       }
+      //x1x0 Loads and Stores
       case (0b00011000000000000000000000000000):
       case (0b00001100000000000000000000000000):
       case (0b00001000000000000000000000000000):
       case (0b00011100000000000000000000000000): {
         loadStoreHandler(instruction);
       }
+      //101x Branches
       case (0b00010100000000000000000000000000):
       case (0b00010110000000000000000000000000): {
         branchHandler(instruction);
@@ -110,6 +114,22 @@ int main(int argc, char **argv) {
   //printEnd(outPtr);
   //fcloseall();
   return EXIT_SUCCESS;
+}
+
+void dataProcessingImmHandler(uint32_t instruction) {
+
+}
+
+void dataProcessingRegHandler(uint32_t instruction) {
+
+}
+
+void loadStoreHandler(uint32_t instruction) {
+
+}
+
+void branchHandler(uint32_t instruction) {
+
 }
 
 //Prints out final states
