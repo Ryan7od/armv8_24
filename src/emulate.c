@@ -6,7 +6,7 @@
 #define strlen(arr) = sizeOf(arr)/sizeOf(arr[0])
 
 //ADTs
-typedef uint64_t Register;
+typedef int64_t Register;
 
 struct PSTATE {
   bool N = false;
@@ -27,6 +27,10 @@ struct SpecialRegisters {
 
 //Prototype functions
 extern void printEnd(FILE *ptr);
+extern void write32(Register* reg, int32_t val);
+extern int32_t read32(Register* reg);
+extern void write64(Register* reg, int64_t val);
+extern int64_t read64(Register* reg);
 
 //Global variables
 //2MB of memory
@@ -54,6 +58,8 @@ int main(int argc, char **argv) {
   //Read in file
   FILE *inPtr = fopen(argv[0], "rb");
 
+  while ()
+
 
   printEnd(outPtr);
   fcloseall();
@@ -62,4 +68,20 @@ int main(int argc, char **argv) {
 
 void printEnd(FILE *ptr) {
 
+}
+
+void write32(Register* reg, int32_t val) {
+  *reg = ((int64_t) val) << 32;
+}
+
+void write64(Register* reg, int64_t val) {
+  *reg = val;
+}
+
+int32_t read32(Register* reg) {
+  return *reg >> 32;
+}
+
+int64_t read64(Register* reg) {
+  return *reg;
 }
