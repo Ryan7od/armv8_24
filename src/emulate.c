@@ -64,11 +64,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  for(int i = 0; i < 12; i++) {
-    printf("%x ", memory[i]);
-    if ((i+1)%4 == 0) printf("\n");
-  }
-
 
   printEnd(outPtr);
   //fcloseall();
