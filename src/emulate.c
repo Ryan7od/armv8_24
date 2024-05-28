@@ -6,17 +6,13 @@
 #define strlen(arr) = sizeof(arr)/sizeof(arr[0])
 
 //ADTs
-typedef int64_t Register;
+typedef uint64_t Register;
 
 struct PSTATE {
   bool N;
   bool Z;
   bool C;
   bool V;
-};
-
-struct GeneralRegisters {
-  Register registers[32];
 };
 
 struct SpecialRegisters {
@@ -35,7 +31,7 @@ extern int64_t read64(Register* reg);
 //Global variables
 //2MB of memory
 unsigned char memory[2097152] = { 0 };
-struct GeneralRegisters gRegisters = { { 0 } };
+Register gRegisters[32] = { 0 };
 struct SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
 #define zeroReg &sRegisters.Zero
 
@@ -60,13 +56,12 @@ int main(int argc, char **argv) {
   FILE *inPtr = fopen(argv[1], "rb");
   unsigned char buffer[4] = { 0 };
   unsigned char* memPtr = memory;
-  fread(buffer, sizeof(buffer), 1, inPtr);
-  while (buffer[0] != -1) {
-    *memPtr++ = buffer[0];
-    *memPtr++ = buffer[1];
-    *memPtr++ = buffer[2];
+  if(inPtr == NULL) return -1;
+  while (fread(&buffer, sizeof(buffer), 1, inPtr)) {
     *memPtr++ = buffer[3];
-    fread(buffer, sizeof(buffer), 1, inPtr);
+    *memPtr++ = buffer[2];
+    *memPtr++ = buffer[1];
+    *memPtr++ = buffer[0];
   }
 
   for(int i = 0; i < 8; i++) {
@@ -76,28 +71,42 @@ int main(int argc, char **argv) {
 
 
   printEnd(outPtr);
-  fcloseall();
+  //fcloseall();
   return EXIT_SUCCESS;
 }
 
+//Prints out final states
 void printEnd(FILE *ptr) {
-
+  for (int i = 0; i < 32; i++) {
+    fprintf(ptr, "X%i = %x\n", i, gRegisters[i]);
+  }
+  fprintf(ptr, "PC = %x\n", sRegisters.PC);
+  fprintf(ptr, "PSTATE: ");
+  if(sRegisters.pstate.N) fprintf(ptr, "N"); else fprintf(ptr, "-");
+  if(sRegisters.pstate.Z) fprintf(ptr, "Z"); else fprintf(ptr, "-");
+  if(sRegisters.pstate.C) fprintf(ptr, "C"); else fprintf(ptr, "-");
+  if(sRegisters.pstate.V) fprintf(ptr, "V\n"); else fprintf(ptr, "-\n");
+  //Output used memory
 }
 
+//Writes unless zero reg, since 32 bits, moves to the front of register by LSL
 void write32(Register* reg, int32_t val) {
   if (reg == zeroReg) return;
   *reg = ((int64_t) val) << 32;
 }
 
+//Writes unless zero reg
 void write64(Register* reg, int64_t val) {
   if (reg == zeroReg) return;
   *reg = val;
 }
 
+//Reads, since only first 32 bits LSR
 int32_t read32(Register* reg) {
   return *reg >> 32;
 }
 
+//Reads
 int64_t read64(Register* reg) {
   return *reg;
 }
