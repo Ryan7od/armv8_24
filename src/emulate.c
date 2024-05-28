@@ -34,7 +34,7 @@ extern int64_t read64(Register* reg);
 
 //Global variables
 //2MB of memory
-char* memory[2097152] = { 0 };
+unsigned char memory[2097152] = { 0 };
 struct GeneralRegisters gRegisters;
 struct SpecialRegisters sRegisters;
 
