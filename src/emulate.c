@@ -4,6 +4,8 @@
 #include <stdbool.h>
 
 #define strlen(arr) = sizeof(arr)/sizeof(arr[0])
+#define zeroReg &sRegisters.Zero
+#define MB2 2097152
 
 //ADTs
 typedef uint64_t Register;
@@ -23,17 +25,21 @@ struct SpecialRegisters {
 
 //Prototype functions
 extern void printEnd(FILE *ptr);
-extern void write32(Register* reg, int32_t val);
-extern int32_t read32(Register* reg);
-extern void write64(Register* reg, int64_t val);
-extern int64_t read64(Register* reg);
+extern void write32(Register* reg, uint32_t val);
+extern uint32_t read32(Register* reg);
+extern void write64(Register* reg, uint64_t val);
+extern uint64_t read64(Register* reg);
+extern uint32_t fetch32(int index);
+extern void dataProcessingImmHandler(uint32_t instruction);
+extern void dataProcessingRegHandler(uint32_t instruction);
+extern void loadStoreHandler(uint32_t instruction);
+extern void branchHandler(uint32_t instruction);
 
 //Global variables
 //2MB of memory
-unsigned char memory[2097152] = { 0 };
+unsigned char memory[MB2] = { 0 };
 Register gRegisters[32] = { 0 };
 struct SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
-#define zeroReg &sRegisters.Zero
 
 int main(int argc, char **argv) {
   //Check 1 or 2 arguments
@@ -64,8 +70,44 @@ int main(int argc, char **argv) {
     }
   }
 
+  //Run through each step
+  uint32_t instruction = fetch32(sRegisters.PC);
+  //Terminate at 8a000000
+  while(instruction != 0x8a000000) {
+    //Switch case to send to different operation handlers
+    switch (instruction & 0b00011110000000000000000000000000) {
+      case (0b00010000000000000000000000000000):
+      case (0b00010010000000000000000000000000): {
+        dataProcessingImmHandler(instruction);
+      }
+      case (0b00001010000000000000000000000000):
+      case (0b00011010000000000000000000000000): {
+        dataProcessingRegHandler(instruction);
+      }
+      case (0b00011000000000000000000000000000):
+      case (0b00001100000000000000000000000000):
+      case (0b00001000000000000000000000000000):
+      case (0b00011100000000000000000000000000): {
+        loadStoreHandler(instruction);
+      }
+      case (0b00010100000000000000000000000000):
+      case (0b00010110000000000000000000000000): {
+        branchHandler(instruction);
+        break;
+      }
+      default: {
 
-  printEnd(outPtr);
+      }
+    }
+
+    write64(&sRegisters.PC, sRegisters.PC + 4);
+    instruction = fetch32(sRegisters.PC);
+  }
+
+
+
+
+  //printEnd(outPtr);
   //fcloseall();
   return EXIT_SUCCESS;
 }
@@ -86,23 +128,28 @@ void printEnd(FILE *ptr) {
 }
 
 //Writes unless zero reg, since 32 bits, moves to the front of register by LSL
-void write32(Register* reg, int32_t val) {
+void write32(Register* reg, uint32_t val) {
   if (reg == zeroReg) return;
   *reg = ((int64_t) val) << 32;
 }
 
 //Writes unless zero reg
-void write64(Register* reg, int64_t val) {
+void write64(Register* reg, uint64_t val) {
   if (reg == zeroReg) return;
   *reg = val;
 }
 
 //Reads, since only first 32 bits LSR
-int32_t read32(Register* reg) {
+uint32_t read32(Register* reg) {
   return *reg >> 32;
 }
 
 //Reads
-int64_t read64(Register* reg) {
+uint64_t read64(Register* reg) {
   return *reg;
+}
+
+uint32_t fetch32(int index) {
+  if (index + 3 >= 2097152) return -1;
+  return memory[index] + memory[index+1] << 4 + memory[index+2] << 8 + memory[index+3] << 12;
 }
