@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+#include <ctype.h>
 
 struct SA_pair {
     char Symbol[100];
@@ -12,19 +15,26 @@ struct list {
     int numItems;
     int size;
 };
+#define MaxLineLength 30
+#define SymbolTableSize 20
+typedef enum {instruction, directive, label} LineType;
 
-typedef struct {} IR;
+#define MAX_OPERANDS 4
+typedef struct {
+    char *opcode;
+    char operand[MAX_OPERANDS];
+} InstructionIR;
 
 
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
-IR *parser(char *line, int *data);
+void parser(char *line);
 
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
     SymbolTable.numItems = 0;
-    SymbolTable.size = 20;
+    SymbolTable.size = SymbolTableSize;
     SymbolTable.data = malloc(SymbolTable.size * sizeof(struct SA_pair));
 
     if (SymbolTable.data == NULL) {
@@ -47,3 +57,7 @@ void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol) {
     mySymbolTable->numItems++;
 }
 
+void parser(char *line) {
+    char *s = line;
+    while (isspace(*s)) { s++; };
+}
