@@ -127,9 +127,10 @@ void loadStoreHandler(uint32_t instruction) {
 
 }
 
+//Branches are either register, immediate or immediate conditional, based on the first 3 bits
 void branchHandler(uint32_t instruction) {
-  //Register - 31st bit set
-  if (instruction & 0b10000000000000000000000000000000) {
+  //Register - 110
+  if ((instruction & 0b11100000000000000000000000000000) == 0b11000000000000000000000000000000) {
     //Not zero register
     if ((instruction & 0b00000000000000000000001111110000) != 0b00000000000000000000001111110000) {
       uint32_t location = (instruction & 0b00000000000000000000001111110000) >> 4;
@@ -138,8 +139,8 @@ void branchHandler(uint32_t instruction) {
     return;
   }
 
-  //Unconditional
-  if (unconditional) {
+  //Unconditional - 000
+  if ((instruction & 0b11100000000000000000000000000000) == 0) {
     //Find base shift
     uint32_t shift = (instruction & 0b00000011111111111111111111111111) << 2;
     //Extend sign if MSB is 1
@@ -152,8 +153,8 @@ void branchHandler(uint32_t instruction) {
     return;
   }
 
-  //Conditional
-  if (conditional) {
+  //Conditional - 010
+  if ((instruction & 0b11100000000000000000000000000000) == 0b01000000000000000000000000000000) {
     //Tackle condition
     bool condition = false;
     switch (instruction & 0b00000000000000000000000000001111) {
