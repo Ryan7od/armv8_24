@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
         break;
     }
 
-    write64(&sRegisters.PC, sRegisters.PC + 4);
+    write64(&sRegisters.PC, read64(&sRegisters.PC) + 4);
     instruction = fetch32(sRegisters.PC);
   }
 
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
 
 
   printEnd(outPtr);
-  if (argc > 2) fcloseall();
+  //fcloseall();
   return EXIT_SUCCESS;
 }
 
@@ -202,10 +202,10 @@ void branchHandler(uint32_t instruction) {
 //Prints out final states
 void printEnd(FILE *ptr) {
   for (int i = 0; i < 32; i++) {
-    if (i < 10) fprintf(ptr, "X%i  = %016lx\n", i, gRegisters[i]);
-    else fprintf(ptr, "X%i = %016lx\n", i, gRegisters[i]);
+    if (i < 10) fprintf(ptr, "X%i  = %016lx\n", i, read64(&gRegisters[i]));
+    else fprintf(ptr, "X%i = %016lx\n", i, read64(&gRegisters[i]));
   }
-  fprintf(ptr, "PC  = %016lx\n", sRegisters.PC);
+  fprintf(ptr, "PC  = %016lx\n", read64(&sRegisters.PC));
   fprintf(ptr, "PSTATE: ");
   if(sRegisters.pstate.N) fprintf(ptr, "N"); else fprintf(ptr, "-");
   if(sRegisters.pstate.Z) fprintf(ptr, "Z"); else fprintf(ptr, "-");
