@@ -34,6 +34,7 @@ extern void dataProcessingImmHandler(uint32_t instruction);
 extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
+extern uint32_t twos(uint32_t num);
 
 //Global variables
 //2MB of memory
@@ -78,30 +79,28 @@ int main(int argc, char **argv) {
     switch (instruction & 0b00011110000000000000000000000000) {
       //100x Data Processing (Immediate)
       case (0b00010000000000000000000000000000):
-      case (0b00010010000000000000000000000000): {
+      case (0b00010010000000000000000000000000):
         dataProcessingImmHandler(instruction);
-      }
+        break;
       //x101 Data Processing (Register)
       case (0b00001010000000000000000000000000):
-      case (0b00011010000000000000000000000000): {
+      case (0b00011010000000000000000000000000):
         dataProcessingRegHandler(instruction);
-      }
+        break;
       //x1x0 Loads and Stores
       case (0b00011000000000000000000000000000):
       case (0b00001100000000000000000000000000):
       case (0b00001000000000000000000000000000):
-      case (0b00011100000000000000000000000000): {
+      case (0b00011100000000000000000000000000):
         loadStoreHandler(instruction);
-      }
+        break;
       //101x Branches
       case (0b00010100000000000000000000000000):
-      case (0b00010110000000000000000000000000): {
+      case (0b00010110000000000000000000000000):
         branchHandler(instruction);
         break;
-      }
-      default: {
-
-      }
+      default:
+        break;
     }
 
     write64(&sRegisters.PC, sRegisters.PC + 4);
@@ -111,8 +110,8 @@ int main(int argc, char **argv) {
 
 
 
-  //printEnd(outPtr);
-  //fcloseall();
+  printEnd(outPtr);
+  if (argc > 2) fcloseall();
   return EXIT_SUCCESS;
 }
 
@@ -129,7 +128,74 @@ void loadStoreHandler(uint32_t instruction) {
 }
 
 void branchHandler(uint32_t instruction) {
+  //Register - 31st bit set
+  if (instruction & 0b10000000000000000000000000000000) {
+    //Not zero register
+    if ((instruction & 0b00000000000000000000001111110000) != 0b00000000000000000000001111110000) {
+      uint32_t location = (instruction & 0b00000000000000000000001111110000) >> 4;
+      write64(&sRegisters.PC, read64(&gRegisters[location]));
+    }
+    return;
+  }
 
+  //Unconditional
+  if (unconditional) {
+    //Find base shift
+    uint32_t shift = (instruction & 0b00000011111111111111111111111111) << 2;
+    //Extend sign if MSB is 1
+    if (shift & 0b00001000000000000000000000000000) {
+      shift = instruction | 0b11111100000000000000000000000000;
+      write64(&sRegisters.PC, read64(&sRegisters.PC) - twos(shift));
+    } else {
+      write64(&sRegisters.PC, read64(&sRegisters.PC) + shift);
+    }
+    return;
+  }
+
+  //Conditional
+  if (conditional) {
+    //Tackle condition
+    bool condition = false;
+    switch (instruction & 0b00000000000000000000000000001111) {
+      case (0b00000):
+        condition = sRegisters.pstate.Z == 1;
+        break;
+      case (0b00001):
+        condition = sRegisters.pstate.Z == 0;
+        break;
+      case (0b01010):
+        condition = sRegisters.pstate.N == sRegisters.pstate.V;
+        break;
+      case (0b01011):
+        condition = sRegisters.pstate.N != sRegisters.pstate.V;
+        break;
+      case (0b01100):
+        condition = sRegisters.pstate.Z == 0 && sRegisters.pstate.N == sRegisters.pstate.V;
+        break;
+      case (0b01101):
+        condition = !(sRegisters.pstate.Z == 0 && sRegisters.pstate.N == sRegisters.pstate.V);
+        break;
+      case (0b01110):
+        condition = true;
+        break;
+      default:
+        break;
+    }
+
+    if (!condition) return;
+
+    //Find base shift
+    uint32_t shift = (instruction & 0b00000011111111111111111111100000) >> 3;
+    //Extend sign if MSB is 1
+    if (shift & 0b00000000000100000000000000000000) {
+      shift = instruction | 0b11111111111000000000000000000000;
+      write64(&sRegisters.PC, read64(&sRegisters.PC) - twos(shift));
+    } else {
+      write64(&sRegisters.PC, read64(&sRegisters.PC) + shift);
+    }
+
+    return;
+  }
 }
 
 //Prints out final states
@@ -172,4 +238,8 @@ uint64_t read64(Register* reg) {
 uint32_t fetch32(int index) {
   if (index + 3 >= 2097152) return -1;
   return memory[index] + memory[index+1] << 4 + memory[index+2] << 8 + memory[index+3] << 12;
+}
+
+uint32_t twos(uint32_t num) {
+  return (~num) + 1;
 }
