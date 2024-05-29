@@ -29,4 +29,25 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 }
 
+void fileProcessor(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
+    }
 
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    while ((read = getline(&line, &len, file)) != -1) {
+        // Remove trailing newline character
+        if (line[read - 1] == '\n') {
+            line[read - 1] = '\0';
+        }
+        parser(line);
+    }
+
+    free(line);
+    fclose(file);
+}
