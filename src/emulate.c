@@ -5,7 +5,7 @@
 
 #define strlen(arr) = sizeof(arr)/sizeof(arr[0])
 #define zeroReg &sRegisters.Zero
-#define MB2 2097152
+#define MB2 2097152 // 2MB of memory (2*2^20)
 
 //ADTs
 typedef uint64_t Register;
@@ -39,7 +39,7 @@ extern uint32_t twos(uint32_t num);
 //Global variables
 //2MB of memory
 unsigned char memory[MB2] = { 0 };
-Register gRegisters[32] = { 0 };
+Register gRegisters[31] = { 0 }; // Note Max changed from 32 to 31
 struct SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
 
 int main(int argc, char **argv) {
