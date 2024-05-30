@@ -35,7 +35,7 @@ extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
 extern uint32_t twos(uint32_t num);
-extern uint32_t mask32_AtoB(uint32_t instruction, uint8_t a, uint8_t b);
+extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);
 
 //Global variables
 //2MB of memory
@@ -123,11 +123,11 @@ int main(int argc, char **argv) {
 
 void dataProcessingImmHandler(uint32_t instruction) {
   // Get all elements of instruction for data processing immediate
-  uint8_t rd = mask32_AtoB(instruction, 4, 0);
+  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
   // Leaving operand masking to cases
-  uint8_t opi = mask32_AtoB(instruction, 25, 23);
-  uint8_t opc = mask32_AtoB(instruction, 30, 29);
-  uint8_t sf = mask32_AtoB(instruction, 31, 31);
+  uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
+  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
+  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
   switch (opi) {
     case 0b010:
       // TODO: Arithmetic
@@ -271,14 +271,35 @@ uint32_t twos(uint32_t num) {
   return (~num) + 1;
 }
 
-// Returns the instruction masked from bits a to b inclusive, ensure b <= a, returns 0 if error
+// Returns the instruction masked from bits a to b inclusive, ensure a >= b, returns 0 if error
 uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   // Check for invalid bit positions
-  if (a > b || a > 31 || b > 31) {
+  if (a < b || a > 31 || b > 31) {
+    printf("Error: Invalid a: %u or b: %u", a, b);
     return 0;
   }
   // Create mask from a and b via 1 shifted by difference of a and b + 1 minus 1 then shifted by a
-  uint32_t mask = ((1U << (b - a + 1)) - 1) << a;
+  uint32_t mask = ((1U << (a - b + 1)) - 1) << b;
   // Return instruction masked
-  return (instruction & mask) >> (b - a);
+  return (instruction & mask) >> b;
+
+  // Temporary Testing was in main
+  uint32_t testa = 0b01010101;
+  uint32_t testc = 0b11110000;
+  if (mask32_AtoB_shifted(testa, 0, 0) != 1) {
+    return -1;
+  }
+  if (mask32_AtoB_shifted(testa, 3, 0) != 0b0101) {
+    printf("Got: %x, Expected: %x", mask32_AtoB_shifted(testa, 3, 0), 0b0101);
+    return -2;
+  }
+  if (mask32_AtoB_shifted(testa, 6, 1) != 0b101010) {
+    return -3;
+  }
+  if (mask32_AtoB_shifted(testc, 4, 3) != 0b10) {
+    return -4;
+  }
+
+  return 0;
+  // ^^^ Comment out when done
 }
