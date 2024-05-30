@@ -43,10 +43,10 @@ Register gRegisters[32] = { 0 };
 struct SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
 
 int main(int argc, char **argv) {
-  //Check 1 or 2 arguments
+  //Ensure 1 or 2 arguments
   if (argc != 3 && argc != 2) {
     printf("Wrong number of arguments");
-    return -1;
+    return EXIT_FAILURE;
   }
 
   //Set output method
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
     outPtr = fopen(argv[2], "w");
     if (outPtr == NULL) {
       printf("Error opening %s", argv[2]);
-      return -1;
+      return EXIT_FAILURE;
     }
   }
 
@@ -64,7 +64,9 @@ int main(int argc, char **argv) {
   inPtr = inPtr = fopen(argv[1], "rb");
   unsigned char buffer[4] = { 0 };
   unsigned char* memPtr = memory;
-  if(inPtr == NULL) return -1;
+  if (inPtr == NULL) {
+      return EXIT_FAILURE;
+  }
   while (fread(buffer, sizeof(buffer), 1, inPtr)) {
     for (int i = 0; i < 4; i++) {
       *memPtr++ = buffer[i];
@@ -73,7 +75,8 @@ int main(int argc, char **argv) {
 
   //Run through each step
   uint32_t instruction = fetch32(sRegisters.PC);
-  //Terminate at 8a000000
+
+  //Terminate at halt (8a000000)
   while(instruction != 0x8a000000) {
     //Switch case to send to different operation handlers
     switch (instruction & 0b00011110000000000000000000000000) {
@@ -106,8 +109,6 @@ int main(int argc, char **argv) {
     write64(&sRegisters.PC, read64(&sRegisters.PC) + 4);
     instruction = fetch32(sRegisters.PC);
   }
-
-
 
 
   printEnd(outPtr);
