@@ -267,7 +267,7 @@ uint32_t twos(uint32_t num) {
 }
 
 // Returns the instruction masked from bits a to b inclusive, ensure b <= a, returns 0 if error
-uint32_t mask32_AtoB(uint32_t instruction, uint8_t a, uint8_t b) {
+uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   // Check for invalid bit positions
   if (a > b || a > 31 || b > 31) {
     return 0;
@@ -275,5 +275,5 @@ uint32_t mask32_AtoB(uint32_t instruction, uint8_t a, uint8_t b) {
   // Create mask from a and b via 1 shifted by difference of a and b + 1 minus 1 then shifted by a
   uint32_t mask = ((1U << (b - a + 1)) - 1) << a;
   // Return instruction masked
-  return instruction & mask;
+  return (instruction & mask) >> (b - a);
 }
