@@ -35,6 +35,7 @@ extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
 extern uint32_t twos(uint32_t num);
+extern uint32_t mask32_AtoB(uint32_t instruction, uint8_t a, uint8_t b);
 
 //Global variables
 //2MB of memory
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
   while(instruction != 0x8a000000) {
     //Defined mask & isolate bits 28-5 to get op0
     uint32_t mask = 0xF << 25;
-    uint32_t op0 = (instruction & mask) >> 25;
+    uint8_t op0 = (instruction & mask) >> 25;
     //Switch case to send to different operation handlers
     switch (op0) {
       //100x Data Processing (Immediate)
@@ -121,9 +122,12 @@ int main(int argc, char **argv) {
 }
 
 void dataProcessingImmHandler(uint32_t instruction) {
-  // rd
+  // Getting rd
+  uint32_t rdMask = 0x1F;
+  uint8_t rd = rdMask & instruction;
 
   // operand
+  // TODO: uint32_t operandMask =
 
   // opi
 
@@ -262,3 +266,6 @@ uint32_t twos(uint32_t num) {
   return (~num) + 1;
 }
 
+uint32_t mask32_AtoB(uint32_t instruction, uint8_t a, uint8_t b) {
+
+}
