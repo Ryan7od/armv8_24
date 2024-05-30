@@ -4,8 +4,12 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+#define MaxLineLength 30
+#define SymbolTableSize 20
+#define MAX_SYMBOL 100
+
 struct SA_pair {
-    char Symbol[100];
+    char Symbol[MAX_SYMBOL];
     int address;
 };
 
@@ -15,8 +19,7 @@ struct list {
     int numItems;
     int size;
 };
-#define MaxLineLength 30
-#define SymbolTableSize 20
+
 typedef enum {instruction, directive, label} LineType;
 
 #define MAX_OPERANDS 4
@@ -29,7 +32,7 @@ typedef struct {
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
 void parser(char *line);
-
+char* DataProcessingInstruction(InstructionIR instruction);
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
@@ -80,6 +83,17 @@ void fileProcessor(const char *filename) {
 }
 void parser(char *line) {
     char *s = line;
-    while (isspace(*s)) { s++; };
+    if (*s == '.') {
+        //TODO
+    } else  {
+        char *temp = line;
+        char *end = line;
+        while (*end != '\0') {temp = end; end++;}
+        if(*temp == ':' && isalpha(*s)) {
+            //TODO
+        } else {
+            //TODO
+        }
+    }
 }
 
