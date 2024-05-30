@@ -122,18 +122,12 @@ int main(int argc, char **argv) {
 }
 
 void dataProcessingImmHandler(uint32_t instruction) {
-  // Getting rd
-  uint32_t rdMask = 0x1F;
-  uint8_t rd = rdMask & instruction;
-
-  // operand
-  // TODO: uint32_t operandMask =
-
-  // opi
-
-  // opc
-
-  // sf
+  // Get all elements of instruction for data processing immediate
+  uint8_t rd = mask32_AtoB(instruction, 4, 0);
+  uint32_t operand = mask32_AtoB(instruction, 22, 5);
+  uint8_t opi = mask32_AtoB(instruction, 25, 23);
+  uint8_t opc = mask32_AtoB(instruction, 30, 29);
+  uint8_t sf = mask32_AtoB(instruction, 31, 31);
 
   // Arithmetic
 
