@@ -31,6 +31,8 @@ extern void write64(Register* reg, uint64_t val);
 extern uint64_t read64(Register* reg);
 extern uint32_t fetch32(int index);
 extern void dataProcessingImmHandler(uint32_t instruction);
+extern void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi, uint8_t opc, uint8_t sf);
+extern void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi, uint8_t opc, uint8_t sf);
 extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
@@ -123,26 +125,53 @@ int main(int argc, char **argv) {
 
 void dataProcessingImmHandler(uint32_t instruction) {
   // Get all elements of instruction for data processing immediate
-  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0); // 5bits
   // Leaving operand masking to cases
   uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
   uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
   uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
   switch (opi) {
     case 0b010:
-      // TODO: Arithmetic
+      dataProcessingArithImmHandler(instruction, rd, opi, opc, sf);
       break;
     case 0b101:
-      // TODO: Wide move
+      dataProcessingWideMoveImmHandler(instruction, rd, opi, opc, sf);
       break;
     default:
       // TODO: Error
       break;
   }
+}
 
-  // Arithmetic
+void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi, uint8_t opc, uint8_t sf) {
+  uint8_t sh = mask32_AtoB_shifted(instruction, 22, 22);
+  uint32_t imm12 = mask32_AtoB_shifted(instruction, 21, 10);
+  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+  // Shift immedate left by 12 is sh flag is 1
+  if (sh == 1) {
+    imm12 <<= 12;
+  }
 
-  // Wide move
+  switch (opc) {
+    // add
+    case 0b00:
+      break;
+    // adds
+    case 0b01:
+      break;
+    // sub
+    case 0b10:
+      break;
+    // subs
+    case 0b11:
+      break;
+    default:
+      break;
+  }
+}
+
+void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi, uint8_t opc, uint8_t sf) {
+
 }
 
 void dataProcessingRegHandler(uint32_t instruction) {
@@ -283,23 +312,16 @@ uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   // Return instruction masked
   return (instruction & mask) >> b;
 
-  // Temporary Testing was in main
+  /* Temporary Testing was in main
   uint32_t testa = 0b01010101;
   uint32_t testc = 0b11110000;
-  if (mask32_AtoB_shifted(testa, 0, 0) != 1) {
-    return -1;
-  }
+  if (mask32_AtoB_shifted(testa, 0, 0) != 1) return -1;
   if (mask32_AtoB_shifted(testa, 3, 0) != 0b0101) {
     printf("Got: %x, Expected: %x", mask32_AtoB_shifted(testa, 3, 0), 0b0101);
     return -2;
   }
-  if (mask32_AtoB_shifted(testa, 6, 1) != 0b101010) {
-    return -3;
-  }
-  if (mask32_AtoB_shifted(testc, 4, 3) != 0b10) {
-    return -4;
-  }
-
+  if (mask32_AtoB_shifted(testa, 6, 1) != 0b101010) return -3;
+  if (mask32_AtoB_shifted(testc, 4, 3) != 0b10) return -4;
   return 0;
-  // ^^^ Comment out when done
+  */
 }
