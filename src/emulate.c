@@ -121,7 +121,19 @@ int main(int argc, char **argv) {
 }
 
 void dataProcessingImmHandler(uint32_t instruction) {
+  // rd
 
+  // operand
+
+  // opi
+
+  // opc
+
+  // sf
+
+  // Arithmetic
+
+  // Wide move
 }
 
 void dataProcessingRegHandler(uint32_t instruction) {
