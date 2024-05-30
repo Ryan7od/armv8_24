@@ -124,10 +124,21 @@ int main(int argc, char **argv) {
 void dataProcessingImmHandler(uint32_t instruction) {
   // Get all elements of instruction for data processing immediate
   uint8_t rd = mask32_AtoB(instruction, 4, 0);
-  uint32_t operand = mask32_AtoB(instruction, 22, 5);
+  // Leaving operand masking to cases
   uint8_t opi = mask32_AtoB(instruction, 25, 23);
   uint8_t opc = mask32_AtoB(instruction, 30, 29);
   uint8_t sf = mask32_AtoB(instruction, 31, 31);
+  switch (opi) {
+    case 0b010:
+      // TODO: Arithmetic
+      break;
+    case 0b101:
+      // TODO: Wide move
+      break;
+    default:
+      // TODO: Error
+      break;
+  }
 
   // Arithmetic
 
