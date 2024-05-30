@@ -244,3 +244,4 @@ uint32_t fetch32(int index) {
 uint32_t twos(uint32_t num) {
   return (~num) + 1;
 }
+
