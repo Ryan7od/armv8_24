@@ -31,11 +31,13 @@ extern void write64(Register* reg, uint64_t val);
 extern uint64_t read64(Register* reg);
 extern uint32_t fetch32(int index);
 extern void dataProcessingImmHandler(uint32_t instruction);
+extern void dataProcessingImmArithHandler(uint32_t instruction);
 extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
 extern uint32_t twos(uint32_t num);
 extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);
+extern void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64);
 
 //Global variables
 //2MB of memory
@@ -130,7 +132,7 @@ void dataProcessingImmHandler(uint32_t instruction) {
   uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
   switch (opi) {
     case 0b010:
-      // TODO: Arithmetic
+      dataProcessingImmArithHandler(instruction);
       break;
     case 0b101:
       // TODO: Wide move
@@ -143,6 +145,56 @@ void dataProcessingImmHandler(uint32_t instruction) {
   // Arithmetic
 
   // Wide move
+}
+
+void dataProcessingImmArithHandler(uint32_t instruction) {
+  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
+  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+  uint8_t sh = mask32_AtoB_shifted(instruction, 22, 22);
+  uint32_t imm12 = mask32_AtoB_shifted(instruction, 21, 10);
+  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+
+  //Do shift if necessary
+  if (sh) {
+    imm12 = imm12 << 12;
+  }
+
+  //Fetch value in Rn and sign it
+  uint64_t operand;
+  if (sf) {
+    operand = read64(&gRegisters[rn]);
+  } else {
+    operand = read32(&gRegisters[rn]);
+  }
+
+
+  uint64_t result;
+  if (opc & 0b10) { //Sub
+    result = operand - imm12;
+  } else { //Add
+    result = operand + imm12;
+  }
+
+  if (opc & 0b01) { //Set flags
+    setFlags(result, operand, imm12, !(opc & 0b10), sf);
+  }
+
+
+  //Find output register
+  Register* output;
+  if((opc & 1) && rd == 0b11111) {
+    output = &sRegisters.Zero;
+  } else {
+    output = &gRegisters[rd];
+  }
+
+  //Set value based on sf
+  if (sf) {
+    write64(output, result);
+  } else {
+    write32(output, result);
+  }
 }
 
 void dataProcessingRegHandler(uint32_t instruction) {
@@ -170,7 +222,7 @@ void branchHandler(uint32_t instruction) {
   //Unconditional - 000
   if (diff == 0b000) {
     //Find base shift
-    uint32_t shift = (instruction & 0b00000011111111111111111111111111) << 2;
+    uint32_t shift = mask32_AtoB_shifted(instruction, 25, 0) << 2;
     //Extend sign if MSB is 1
     if (shift & 0b00001000000000000000000000000000) {
       shift = instruction | 0b11111100000000000000000000000000;
@@ -216,7 +268,7 @@ void branchHandler(uint32_t instruction) {
     //Find base shift
     uint32_t shift = mask32_AtoB_shifted(instruction, 23 ,5) << 2;
     //Extend sign if MSB is 1
-    if (shift & 0b00000000000100000000000000000000) {
+    if (shift & 0b100000000000000000000) {
       shift = shift | 0b11111111111000000000000000000000;
       write64(&sRegisters.PC, read64(&sRegisters.PC) - twos(shift));
     } else {
@@ -284,4 +336,50 @@ uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   uint32_t mask = ((1U << (a - b + 1)) - 1) << b;
   // Return instruction masked
   return (instruction & mask) >> b;
+}
+
+void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64) {
+  //N is set to the sign bit of the result
+  if (bit64) {
+    sRegisters.pstate.N = result & 0x8000000000000000;
+  } else {
+    sRegisters.pstate.N = result & 0x80000000;
+  }
+
+  //Z is set only when the result is all zero
+  sRegisters.pstate.Z = !result;
+
+  //V is set when there is signed overflow/underflow
+  int64_t aSigned = a;
+  int64_t bSigned = b;
+  int64_t max;
+  int64_t min;
+  if (bit64) {
+    max = INT64_MAX;
+    min = INT64_MIN;
+  } else {
+    max = INT32_MAX;
+    min = INT32_MIN;
+  }
+  if (bSigned >= 0) { //Check if a + b > max
+    sRegisters.pstate.V = aSigned > max - bSigned;
+  } else { //Check if a + b < min
+    sRegisters.pstate.V = aSigned < min - bSigned;
+  }
+
+  uint64_t umax;
+  uint64_t umin;
+  if (bit64) {
+    umax = UINT64_MAX;
+  } else {
+    umax = UINT32_MAX;
+  }
+  //C in addition is set when an unsigned carry produced
+  if (addition) {
+    sRegisters.pstate.C = a > umax - b;
+  }
+  //C in subtraction is set if there is no borrow
+  else {
+    sRegisters.pstate.C = a >= b;
+  }
 }
