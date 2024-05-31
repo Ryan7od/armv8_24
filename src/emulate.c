@@ -34,6 +34,9 @@ extern void dataProcessingImmHandler(uint32_t instruction);
 extern void dataProcessingImmArithHandler(uint32_t instruction);
 extern void dataProcessingImmWideMoveHandler(uint32_t instruction);
 extern void dataProcessingRegHandler(uint32_t instruction);
+extern void dataProcessingRegArithHandler(uint32_t instruction);
+extern void dataProcessingRegLogicHandler(uint32_t instruction);
+extern void dataProcessingRegMultHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
 extern uint32_t twos(uint32_t num);
@@ -127,6 +130,45 @@ int main(int argc, char **argv) {
 void dataProcessingRegHandler(uint32_t instruction) {
   uint8_t m = mask32_AtoB_shifted(instruction, 28, 28);
   uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
+
+  if (m) { //Multiply
+    dataProcessingRegMultHandler(instruction);
+  } else {
+    switch (opr) {
+      //Arithmetic
+      case (0b1110):
+      case (0b1100):
+      case (0b1010):
+      case (0b1000):
+        dataProcessingRegArithHandler(instruction);
+        break;
+      //Bit-Logic
+      case (0b0000):
+      case (0b0100):
+      case (0b0010):
+      case (0b0001):
+      case (0b0110):
+      case (0b0101):
+      case (0b0011):
+      case (0b0111):
+        dataProcessingRegLogicHandler(instruction);
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+void dataProcessingRegArithHandler(uint32_t instruction) {
+
+}
+
+void dataProcessingRegLogicHandler(uint32_t instruction) {
+
+}
+
+void dataProcessingRegMultHandler(uint32_t instruction) {
+
 }
 
 void dataProcessingImmHandler(uint32_t instruction) {
