@@ -31,6 +31,9 @@ extern void write64(Register* reg, uint64_t val);
 extern uint64_t read64(Register* reg);
 extern uint32_t fetch32(int index);
 extern void dataProcessingImmHandler(uint32_t instruction);
+extern void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf);
+void setFlags(uint64_t result);
+extern void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf);
 extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
@@ -62,7 +65,7 @@ int main(int argc, char **argv) {
 
   //Read in file
   FILE *inPtr;
-  inPtr = inPtr = fopen(argv[1], "rb");
+  inPtr = fopen(argv[1], "rb");
   unsigned char buffer[4] = { 0 };
   unsigned char* memPtr = memory;
   if (inPtr == NULL) {
@@ -123,30 +126,69 @@ int main(int argc, char **argv) {
 
 void dataProcessingImmHandler(uint32_t instruction) {
   // Get all elements of instruction for data processing immediate
-  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0); // 5bits
   // Leaving operand masking to cases
   uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
   uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
   uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
   switch (opi) {
     case 0b010:
-      // TODO: Arithmetic
+      dataProcessingArithImmHandler(instruction, rd, opc, sf);
       break;
     case 0b101:
-      // TODO: Wide move
+      dataProcessingWideMoveImmHandler(instruction, rd, opc, sf);
       break;
     default:
-      // TODO: Error
+      fprintf(stderr, "Stack pointer not implemented for rd\n");
       break;
   }
+}
 
-  // Arithmetic
+void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf) {
+  // TODO: Bit width via sf
+  uint8_t sh = mask32_AtoB_shifted(instruction, 22, 22);
+  uint32_t imm12 = mask32_AtoB_shifted(instruction, 21, 10);
+  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+  // Shift immedate left by 12 is sh flag is 1
+  if (sh == 1) {
+    imm12 <<= 12;
+  }
 
-  // Wide move
+  // Check if Rn is
+  if (rn == 0b11111) {
+    fprintf(stderr, "Stack pointer not implemented for Rn");
+  }
+
+  // Calculate result
+  int64_t result;
+  if (opc & 0b10) { // Subtract
+    result = gRegisters[rn] - imm12;
+  } else { // Add
+    result = gRegisters[rn] + imm12;
+  }
+
+  // Set flags if LSB bit is 1
+  if (opc & 0b01) { // Set flags
+    if (rd != 0b11111) {
+      gRegisters[rd] = result;
+    } // Otherwise write is to zero register so not changed
+    setFlags(result);
+  } else if (rd == 0b11111) { // No set flags
+    fprintf(stderr, "Stack pointer not implemented for Rd");
+  }
+}
+
+void setFlags(int64_t result) {
+  // TODO: Bit width aswell
+
+}
+
+void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf) {
+  // TODO: Max, wide move immediate handler
 }
 
 void dataProcessingRegHandler(uint32_t instruction) {
-
+  // TODO
 }
 
 void loadStoreHandler(uint32_t instruction) {
@@ -266,7 +308,7 @@ uint64_t read64(Register* reg) {
 
 uint32_t fetch32(int index) {
   if (index + 3 >= 2097152) return -1;
-  return memory[index] + memory[index+1] << 4 + memory[index+2] << 8 + memory[index+3] << 12;
+  return memory[index] + (memory[index+1] << 4) + (memory[index+2] << 8) + (memory[index+3] << 12);
 }
 
 uint32_t twos(uint32_t num) {
@@ -284,4 +326,17 @@ uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   uint32_t mask = ((1U << (a - b + 1)) - 1) << b;
   // Return instruction masked
   return (instruction & mask) >> b;
+
+  /* Temporary Testing was in main
+  uint32_t testa = 0b01010101;
+  uint32_t testc = 0b11110000;
+  if (mask32_AtoB_shifted(testa, 0, 0) != 1) return -1;
+  if (mask32_AtoB_shifted(testa, 3, 0) != 0b0101) {
+    printf("Got: %x, Expected: %x", mask32_AtoB_shifted(testa, 3, 0), 0b0101);
+    return -2;
+  }
+  if (mask32_AtoB_shifted(testa, 6, 1) != 0b101010) return -3;
+  if (mask32_AtoB_shifted(testc, 4, 3) != 0b10) return -4;
+  return 0;
+  */
 }
