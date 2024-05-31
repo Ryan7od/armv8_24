@@ -166,7 +166,6 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
   uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
   uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
   uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
-  uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
   uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
   uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
 
@@ -243,7 +242,6 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
   uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
   uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
   uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
-  uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
   uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
   uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
   uint8_t n = mask32_AtoB_shifted(instruction, 21, 21);
@@ -348,7 +346,58 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
 }
 
 void dataProcessingRegMultHandler(uint32_t instruction) {
+  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+  uint8_t ra = mask32_AtoB_shifted(instruction, 14, 10);
+  uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
+  uint8_t x = mask32_AtoB_shifted(instruction, 15, 15);
+  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
 
+  uint64_t op1;
+  if (sf) {
+    if (ra == 0b1111) {
+      op1 = read64(&sRegisters.Zero);
+    }
+    op1 = read64(&gRegisters[ra]);
+  } else {
+    if (ra == 0b1111) {
+      op1 = read32(&sRegisters.Zero);
+    }
+    op1 = read32(&gRegisters[ra]);
+  }
+
+  uint64_t op2;
+  if (sf) {
+    op2 = read64(&gRegisters[rn]);
+  } else {
+    op2 = read32(&gRegisters[rn]);
+  }
+
+  uint64_t op3;
+  if (sf) {
+    op3 = read64(&gRegisters[rm]);
+  } else {
+    op3 = read32(&gRegisters[rm]);
+  }
+
+  uint64_t product = op2 * op3;
+  //Normalise if 32bit
+  if (sf) product = (uint32_t) product;
+
+  uint64_t result;
+  if (x) { //Sub
+    result = op1 + product;
+  } else { //Add
+    result = op1 - product;
+  }
+
+  //TODO: As far as I'm aware we dont have to code for 1111 since it "also" encodes ZR and that does nothing, but it still encodes R31
+  //Set value based on sf
+  if (sf) {
+    write64(&gRegisters[rd], result);
+  } else {
+    write32(&gRegisters[rd], result);
+  }
 }
 
 void dataProcessingImmHandler(uint32_t instruction) {
