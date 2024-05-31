@@ -32,7 +32,7 @@ extern uint64_t read64(Register* reg);
 extern uint32_t fetch32(int index);
 extern void dataProcessingImmHandler(uint32_t instruction);
 extern void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf);
-void setFlags(uint32_t result);
+void setFlags(uint64_t result);
 extern void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf);
 extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
@@ -133,13 +133,13 @@ void dataProcessingImmHandler(uint32_t instruction) {
   uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
   switch (opi) {
     case 0b010:
-      dataProcessingArithImmHandler(instruction, rd, opi, opc, sf);
+      dataProcessingArithImmHandler(instruction, rd, opc, sf);
       break;
     case 0b101:
-      dataProcessingWideMoveImmHandler(instruction, rd, opi, opc, sf);
+      dataProcessingWideMoveImmHandler(instruction, rd, opc, sf);
       break;
     default:
-      // TODO: Throw not implemeted error
+      fprintf(stderr, "Stack pointer not implemented for rd\n");
       break;
   }
 }
@@ -154,33 +154,33 @@ void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc
     imm12 <<= 12;
   }
 
-  uint64_t result;
-
+  // Check if Rn is
   if (rn == 0b11111) {
-    // TODO: Throw not implemented error
+    fprintf(stderr, "Stack pointer not implemented for Rn");
   }
 
-  if (rd == 0b11111) {
-    // TODO: Throw not implemented error
-  }
-
-  // Add/sub get result
+  // Calculate result
+  int64_t result;
   if (opc & 0b10) { // Subtract
     result = gRegisters[rn] - imm12;
   } else { // Add
     result = gRegisters[rn] + imm12;
   }
 
-  gRegisters[rd] = result;
-
   // Set flags if LSB bit is 1
-  if (opc & 0b01) {
+  if (opc & 0b01) { // Set flags
+    if (rd != 0b11111) {
+      gRegisters[rd] = result;
+    } // Otherwise write is to zero register so not changed
     setFlags(result);
+  } else if (rd == 0b11111) { // No set flags
+    fprintf(stderr, "Stack pointer not implemented for Rd");
   }
 }
 
-void setFlags(uint32_t result) {
-  // TODO: Max, set flags for this result
+void setFlags(int64_t result) {
+  // TODO: Bit width aswell
+
 }
 
 void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf) {
