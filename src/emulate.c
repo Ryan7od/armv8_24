@@ -31,8 +31,9 @@ extern void write64(Register* reg, uint64_t val);
 extern uint64_t read64(Register* reg);
 extern uint32_t fetch32(int index);
 extern void dataProcessingImmHandler(uint32_t instruction);
-extern void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi, uint8_t opc, uint8_t sf);
-extern void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi, uint8_t opc, uint8_t sf);
+extern void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf);
+void setFlags(uint32_t result);
+extern void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf);
 extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
@@ -138,12 +139,13 @@ void dataProcessingImmHandler(uint32_t instruction) {
       dataProcessingWideMoveImmHandler(instruction, rd, opi, opc, sf);
       break;
     default:
-      // TODO: Error
+      // TODO: Throw not implemeted error
       break;
   }
 }
 
-void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi, uint8_t opc, uint8_t sf) {
+void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf) {
+  // TODO: Bit width via sf
   uint8_t sh = mask32_AtoB_shifted(instruction, 22, 22);
   uint32_t imm12 = mask32_AtoB_shifted(instruction, 21, 10);
   uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
@@ -152,30 +154,41 @@ void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi
     imm12 <<= 12;
   }
 
-  switch (opc) {
-    // add
-    case 0b00:
-      break;
-    // adds
-    case 0b01:
-      break;
-    // sub
-    case 0b10:
-      break;
-    // subs
-    case 0b11:
-      break;
-    default:
-      break;
+  uint64_t result;
+
+  if (rn == 0b11111) {
+    // TODO: Throw not implemented error
+  }
+
+  if (rd == 0b11111) {
+    // TODO: Throw not implemeted error
+  }
+
+  // Add/sub get result
+  if (opc & 0b10) { // Subtract
+    result = gRegisters[rn] - imm12;
+  } else { // Add
+    result = gRegisters[rn] + imm12;
+  }
+
+  gRegisters[rd] = result;
+
+  // Set flags if LSB bit is 1
+  if (opc & 0b01) {
+    setFlags(result);
   }
 }
 
-void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opi, uint8_t opc, uint8_t sf) {
+void setFlags(uint32_t result) {
+  // TODO: Max, set flags for this result
+}
 
+void dataProcessingWideMoveImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc, uint8_t sf) {
+  // TODO: Max, wide move immediate handler
 }
 
 void dataProcessingRegHandler(uint32_t instruction) {
-
+  // TODO
 }
 
 void loadStoreHandler(uint32_t instruction) {
@@ -293,7 +306,7 @@ uint64_t read64(Register* reg) {
 
 uint32_t fetch32(int index) {
   if (index + 3 >= 2097152) return -1;
-  return memory[index] + memory[index+1] << 4 + memory[index+2] << 8 + memory[index+3] << 12;
+  return memory[index] + (memory[index+1] << 4) + (memory[index+2] << 8) + (memory[index+3] << 12);
 }
 
 uint32_t twos(uint32_t num) {
