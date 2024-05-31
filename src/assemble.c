@@ -89,7 +89,7 @@ void parser(char *line) {
         char *temp = line;
         char *end = line;
         while (*end != '\0') {temp = end; end++;}
-        if(*temp == ':' && isalpha(*s)) {
+        if (*temp == ':' && isalpha(*s)) {
             //TODO
         } else {
             //TODO
