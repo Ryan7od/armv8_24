@@ -128,8 +128,8 @@ int main(int argc, char **argv) {
 }
 
 void dataProcessingRegHandler(uint32_t instruction) {
-  uint8_t m = mask32_AtoB_shifted(instruction, 28, 28);
-  uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
+  const uint8_t m = mask32_AtoB_shifted(instruction, 28, 28);
+  const uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
 
   if (m) { //Multiply
     if (opr == 0b1000) //Just to confirm correct instruction even though mult is the only case of M=1
@@ -161,13 +161,13 @@ void dataProcessingRegHandler(uint32_t instruction) {
 }
 
 void dataProcessingRegArithHandler(uint32_t instruction) {
-  uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
-  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
-  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
-  uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
-  uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
-  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
-  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+  const uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
+  const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+  const uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
+  const uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
+  const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
 
   uint64_t op1;
   if (sf) {
@@ -237,14 +237,14 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
 }
 
 void dataProcessingRegLogicHandler(uint32_t instruction) {
-  uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
-  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
-  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
-  uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
-  uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
-  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
-  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
-  uint8_t n = mask32_AtoB_shifted(instruction, 21, 21);
+  const uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
+  const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+  const uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
+  const uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
+  const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+  const uint8_t n = mask32_AtoB_shifted(instruction, 21, 21);
 
   uint64_t op1;
   if (sf) {
@@ -346,12 +346,12 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
 }
 
 void dataProcessingRegMultHandler(uint32_t instruction) {
-  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
-  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
-  uint8_t ra = mask32_AtoB_shifted(instruction, 14, 10);
-  uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
-  uint8_t x = mask32_AtoB_shifted(instruction, 15, 15);
-  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+  const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+  const uint8_t ra = mask32_AtoB_shifted(instruction, 14, 10);
+  const uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
+  const uint8_t x = mask32_AtoB_shifted(instruction, 15, 15);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
 
   uint64_t op1;
   if (sf) {
@@ -401,7 +401,7 @@ void dataProcessingRegMultHandler(uint32_t instruction) {
 }
 
 void dataProcessingImmHandler(uint32_t instruction) {
-  uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
+  const uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
 
   switch (opi) {
     case 0b010:
@@ -417,11 +417,11 @@ void dataProcessingImmHandler(uint32_t instruction) {
 }
 
 void dataProcessingImmWideMoveHandler(uint32_t instruction) {
-  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
-  uint8_t hw = mask32_AtoB_shifted(instruction, 22, 21);
+  const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  const uint8_t hw = mask32_AtoB_shifted(instruction, 22, 21);
+  const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
   uint64_t imm16 = mask32_AtoB_shifted(instruction, 20, 5);
-  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
-  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
 
   imm16 = imm16 << (hw << 4); //Shifted by hw * 16
 
@@ -461,12 +461,12 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
 }
 
 void dataProcessingImmArithHandler(uint32_t instruction) {
-  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
-  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
-  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
-  uint8_t sh = mask32_AtoB_shifted(instruction, 22, 22);
+  const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+  const uint8_t sh = mask32_AtoB_shifted(instruction, 22, 22);
+  const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
   uint32_t imm12 = mask32_AtoB_shifted(instruction, 21, 10);
-  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
 
   //Do shift if necessary
   if (sh) {
@@ -509,7 +509,7 @@ void loadStoreHandler(uint32_t instruction) {
 
 //Branches are either register, immediate or immediate conditional, based on the first 3 bits
 void branchHandler(uint32_t instruction) {
-  uint32_t diff = mask32_AtoB_shifted(instruction, 31, 29);
+  const uint32_t diff = mask32_AtoB_shifted(instruction, 31, 29);
 
   //Register - 110
   if (diff == 0b110) {
