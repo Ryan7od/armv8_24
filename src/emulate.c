@@ -197,18 +197,20 @@ void loadStoreHandler(uint32_t instruction) {
 
 //Branches are either register, immediate or immediate conditional, based on the first 3 bits
 void branchHandler(uint32_t instruction) {
+  uint32_t diff = mask32_AtoB_shifted(instruction, 31, 29);
+
   //Register - 110
-  if ((instruction & 0b11100000000000000000000000000000) == 0b11000000000000000000000000000000) {
+  if (diff == 0b110) {
     //Not zero register
-    if ((instruction & 0b00000000000000000000001111110000) != 0b00000000000000000000001111110000) {
-      uint32_t location = (instruction & 0b00000000000000000000001111110000) >> 4;
+    uint32_t location = mask32_AtoB_shifted(instruction, 9, 5);
+    if (location != 0b11111) {
       write64(&sRegisters.PC, read64(&gRegisters[location]));
     }
     return;
   }
 
   //Unconditional - 000
-  if ((instruction & 0b11100000000000000000000000000000) == 0) {
+  if (diff == 0b000) {
     //Find base shift
     uint32_t shift = (instruction & 0b00000011111111111111111111111111) << 2;
     //Extend sign if MSB is 1
@@ -222,26 +224,26 @@ void branchHandler(uint32_t instruction) {
   }
 
   //Conditional - 010
-  if ((instruction & 0b11100000000000000000000000000000) == 0b01000000000000000000000000000000) {
+  if (diff == 0b010) {
     //Tackle condition
     bool condition = false;
-    switch (instruction & 0b00000000000000000000000000001111) {
-      case (0b00000):
+    switch (mask32_AtoB_shifted(instruction, 3, 0)) {
+      case (0b0000):
         condition = sRegisters.pstate.Z == 1;
         break;
-      case (0b00001):
+      case (0b0001):
         condition = sRegisters.pstate.Z == 0;
         break;
-      case (0b01010):
+      case (0b1010):
         condition = sRegisters.pstate.N == sRegisters.pstate.V;
         break;
-      case (0b01011):
+      case (0b1011):
         condition = sRegisters.pstate.N != sRegisters.pstate.V;
         break;
-      case (0b01100):
+      case (0b1100):
         condition = sRegisters.pstate.Z == 0 && sRegisters.pstate.N == sRegisters.pstate.V;
         break;
-      case (0b01101):
+      case (0b1101):
         condition = !(sRegisters.pstate.Z == 0 && sRegisters.pstate.N == sRegisters.pstate.V);
         break;
       case (0b01110):
@@ -254,10 +256,10 @@ void branchHandler(uint32_t instruction) {
     if (!condition) return;
 
     //Find base shift
-    uint32_t shift = (instruction & 0b00000011111111111111111111100000) >> 3;
+    uint32_t shift = mask32_AtoB_shifted(instruction, 23 ,5) << 2;
     //Extend sign if MSB is 1
     if (shift & 0b00000000000100000000000000000000) {
-      shift = instruction | 0b11111111111000000000000000000000;
+      shift = shift | 0b11111111111000000000000000000000;
       write64(&sRegisters.PC, read64(&sRegisters.PC) - twos(shift));
     } else {
       write64(&sRegisters.PC, read64(&sRegisters.PC) + shift);
