@@ -32,6 +32,7 @@ extern uint64_t read64(Register* reg);
 extern uint32_t fetch32(int index);
 extern void dataProcessingImmHandler(uint32_t instruction);
 extern void dataProcessingImmArithHandler(uint32_t instruction);
+extern void dataProcessingImmWideMoveHandler(uint32_t instruction);
 extern void dataProcessingRegHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
@@ -135,7 +136,7 @@ void dataProcessingImmHandler(uint32_t instruction) {
       dataProcessingImmArithHandler(instruction);
       break;
     case 0b101:
-      // TODO: Wide move
+      dataProcessingImmWideMoveHandler(instruction);
       break;
     default:
       // TODO: Error
@@ -145,6 +146,50 @@ void dataProcessingImmHandler(uint32_t instruction) {
   // Arithmetic
 
   // Wide move
+}
+
+void dataProcessingImmWideMoveHandler(uint32_t instruction) {
+  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  uint8_t hw = mask32_AtoB_shifted(instruction, 22, 21);
+  uint64_t imm16 = mask32_AtoB_shifted(instruction, 20, 5);
+  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
+  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+
+  imm16 = imm16 << (hw << 4); //Shifted by hw * 16
+
+  switch (opc) {
+    //movn
+    case (0b00):
+      if (sf) {
+        write64(&gRegisters[rd], ~imm16);
+      } else {
+        write32(&gRegisters[rd], ~imm16);
+      }
+      break;
+    //movz
+    case (0b10):
+      if (sf) {
+        write64(&gRegisters[rd], imm16);
+      } else {
+        write32(&gRegisters[rd], imm16);
+      }
+      break;
+    //movk
+    case (0b11):
+      uint64_t mask = 0xFFFF << hw;
+      //Mask used to keep values from last register
+      if (sf) {
+        uint64_t write = (read64(&gRegisters[rd]) & ~mask) & imm16;
+        write64(&gRegisters[rd], write);
+      } else {
+        uint32_t write = (read32(&gRegisters[rd]) & ~mask) & imm16;
+        write32(&gRegisters[rd], write);
+      }
+      break;
+    default:
+      break;
+
+  }
 }
 
 void dataProcessingImmArithHandler(uint32_t instruction) {
@@ -181,19 +226,12 @@ void dataProcessingImmArithHandler(uint32_t instruction) {
   }
 
 
-  //Find output register
-  Register* output;
-  if((opc & 1) && rd == 0b11111) {
-    output = &sRegisters.Zero;
-  } else {
-    output = &gRegisters[rd];
-  }
-
+  //TODO: As far as I'm aware we dont have to code for 1111 since it "also" encodes ZR and that does nothing, but it still encodes R31
   //Set value based on sf
   if (sf) {
-    write64(output, result);
+    write64(&gRegisters[rd], result);
   } else {
-    write32(output, result);
+    write32(&gRegisters[rd], result);
   }
 }
 
@@ -282,22 +320,22 @@ void branchHandler(uint32_t instruction) {
 //Prints out final states
 void printEnd(FILE *ptr) {
   for (int i = 0; i < 32; i++) {
-    if (i < 10) fprintf(ptr, "X%i  = %016lx\n", i, read64(&gRegisters[i]));
-    else fprintf(ptr, "X%i = %016lx\n", i, read64(&gRegisters[i]));
+    if (i < 10) fprintf(ptr, "X%i  = %016llx\n", i, read64(&gRegisters[i]));
+    else fprintf(ptr, "X%i = %016llx\n", i, read64(&gRegisters[i]));
   }
-  fprintf(ptr, "PC  = %016lx\n", read64(&sRegisters.PC));
+  fprintf(ptr, "PC  = %016llx\n", read64(&sRegisters.PC));
   fprintf(ptr, "PSTATE: ");
   if(sRegisters.pstate.N) fprintf(ptr, "N"); else fprintf(ptr, "-");
   if(sRegisters.pstate.Z) fprintf(ptr, "Z"); else fprintf(ptr, "-");
   if(sRegisters.pstate.C) fprintf(ptr, "C"); else fprintf(ptr, "-");
   if(sRegisters.pstate.V) fprintf(ptr, "V\n"); else fprintf(ptr, "-\n");
-  //Output used memory
+  //TODO: Output used memory
 }
 
 //Writes unless zero reg, since 32 bits, moves to the front of register by LSL
 void write32(Register* reg, uint32_t val) {
   if (reg == zeroReg) return;
-  *reg = ((int64_t) val) << 32;
+  *reg = val & 0x0000FFFF;
 }
 
 //Writes unless zero reg
@@ -308,7 +346,7 @@ void write64(Register* reg, uint64_t val) {
 
 //Reads, since only first 32 bits LSR
 uint32_t read32(Register* reg) {
-  return *reg >> 32;
+  return *reg & 0x0000FFFF;
 }
 
 //Reads
