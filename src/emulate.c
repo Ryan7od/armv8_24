@@ -232,10 +232,6 @@ void dataProcessingImmArithHandler(uint32_t instruction) {
   }
 }
 
-void dataProcessingRegHandler(uint32_t instruction) {
-
-}
-
 void loadStoreHandler(uint32_t instruction) {
 
 }
