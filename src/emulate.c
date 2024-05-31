@@ -124,13 +124,14 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 }
 
+void dataProcessingRegHandler(uint32_t instruction) {
+  uint8_t m = mask32_AtoB_shifted(instruction, 28, 28);
+  uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
+}
+
 void dataProcessingImmHandler(uint32_t instruction) {
-  // Get all elements of instruction for data processing immediate
-  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
-  // Leaving operand masking to cases
   uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
-  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
-  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+
   switch (opi) {
     case 0b010:
       dataProcessingImmArithHandler(instruction);
@@ -142,10 +143,6 @@ void dataProcessingImmHandler(uint32_t instruction) {
       // TODO: Error
       break;
   }
-
-  // Arithmetic
-
-  // Wide move
 }
 
 void dataProcessingImmWideMoveHandler(uint32_t instruction) {
