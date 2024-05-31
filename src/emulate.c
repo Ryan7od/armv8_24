@@ -132,7 +132,8 @@ void dataProcessingRegHandler(uint32_t instruction) {
   uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
 
   if (m) { //Multiply
-    dataProcessingRegMultHandler(instruction);
+    if (opr == 0b1000) //Just to confirm correct instruction even though mult is the only case of M=1
+      dataProcessingRegMultHandler(instruction);
   } else {
     switch (opr) {
       //Arithmetic
@@ -160,7 +161,80 @@ void dataProcessingRegHandler(uint32_t instruction) {
 }
 
 void dataProcessingRegArithHandler(uint32_t instruction) {
+  uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
+  uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
+  uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+  uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
+  uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
+  uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
+  uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
+  uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
 
+  uint64_t op1;
+  if (sf) {
+    op1 = read64(&gRegisters[rn]);
+  } else {
+    op1 = read32(&gRegisters[rn]);
+  }
+
+  uint64_t op2;
+  if (sf) {
+    op2 = read64(&gRegisters[rm]);
+  } else {
+    op2 = read32(&gRegisters[rm]);
+  }
+
+  //Shift op2
+  switch (shift) {
+    //lsl
+    case (0b00):
+      op2 = op2 << operand;
+      break;
+    //lsr
+    case (0b01):
+      op2 = op2 >> operand;
+      break;
+    //asr
+    case (0b10):
+      uint64_t newBit = (operand & 0b1000) >> 3;
+      if (newBit) {
+        //Put it to the right position based on sf
+        if (sf) newBit = newBit << 31; else newBit = newBit << 63;
+        for (int i = 0; i < operand; i++) {
+          op2 = (op2 >> 1) | newBit;
+        }
+      } else { //Bit is 0 so will be the same effect as lsr
+        op2 = op2 >> operand;
+      }
+      break;
+    default:
+      break;
+  }
+
+  //Make sure value is still 32 bits if sf
+  if (sf) {
+    op2 = (uint32_t) op2;
+  }
+
+  uint64_t result;
+  if (opc & 0b10) { //Sub
+    result = op1 - op2;
+  } else { //Add
+    result = op1 + op2;
+  }
+
+  if (opc & 0b01) { //Set flags
+    setFlags(result, op1, op2, !(opc & 0b10), sf);
+  }
+
+
+  //TODO: As far as I'm aware we dont have to code for 1111 since it "also" encodes ZR and that does nothing, but it still encodes R31
+  //Set value based on sf
+  if (sf) {
+    write64(&gRegisters[rd], result);
+  } else {
+    write32(&gRegisters[rd], result);
+  }
 }
 
 void dataProcessingRegLogicHandler(uint32_t instruction) {
@@ -244,7 +318,7 @@ void dataProcessingImmArithHandler(uint32_t instruction) {
     imm12 = imm12 << 12;
   }
 
-  //Fetch value in Rn and sign it
+  //Fetch value in Rn
   uint64_t operand;
   if (sf) {
     operand = read64(&gRegisters[rn]);
