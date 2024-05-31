@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 
   //Read in file
   FILE *inPtr;
-  inPtr = inPtr = fopen(argv[1], "rb");
+  inPtr = fopen(argv[1], "rb");
   unsigned char buffer[4] = { 0 };
   unsigned char* memPtr = memory;
   if (inPtr == NULL) {
@@ -161,7 +161,7 @@ void dataProcessingArithImmHandler(uint32_t instruction, uint8_t rd, uint8_t opc
   }
 
   if (rd == 0b11111) {
-    // TODO: Throw not implemeted error
+    // TODO: Throw not implemented error
   }
 
   // Add/sub get result
