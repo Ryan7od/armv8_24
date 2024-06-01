@@ -285,6 +285,13 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
       break;
     //ror
     case (0b11):
+      //Rotation based on bits
+      int shift;
+      if (sf) shift = 63; else shift = 31;
+      for (int i = 0; i < operand; i++) {
+        //Shifts op2 to right and wraps round last bit
+        op2 = (op2 >> 1) | ((op2 & 0b1) << shift);
+      }
       break;
     default:
       break;
