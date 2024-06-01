@@ -85,6 +85,8 @@ int main(int argc, char **argv) {
 
   //Terminate at halt (8a000000)
   while(instruction != 0x8a000000) {
+    //Define skip for if branch set
+    bool skip = false;
     //Defined mask & isolate bits 28-5 to get op0
     uint32_t mask = 0xF << 25;
     uint8_t op0 = (instruction & mask) >> 25;
@@ -111,13 +113,16 @@ int main(int argc, char **argv) {
       case (0b1010):
       case (0b1011):
         branchHandler(instruction);
+        skip = true;
         break;
       default:
         printf("Error: Non implemented instruction");
         break;
     }
 
-    write64(&sRegisters.PC, read64(&sRegisters.PC) + 4);
+    if (!skip) {
+      write64(&sRegisters.PC, read64(&sRegisters.PC) + 4);
+    }
     instruction = fetch32(sRegisters.PC);
   }
 
