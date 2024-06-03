@@ -38,10 +38,17 @@ extern void dataProcessingRegArithHandler(uint32_t instruction);
 extern void dataProcessingRegLogicHandler(uint32_t instruction);
 extern void dataProcessingRegMultHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
+extern void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address);
+extern void loadStoreLdLitHandler(uint32_t instruction);
+extern void loadStoreUnsgnOffHandler(uint32_t instruction);
+extern void loadStoreRegOffHandler(uint32_t instruction);
+extern void loadStorePIndexHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
 extern uint32_t twos(uint32_t num);
 extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);
 extern void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64);
+extern uint64_t sExtend64(uint64_t value, int msb);
+extern uint32_t sExtend32(uint32_t value, int msb);
 
 //Global variables
 //2MB of memory
@@ -516,8 +523,136 @@ void dataProcessingImmArithHandler(uint32_t instruction) {
 }
 
 void loadStoreHandler(uint32_t instruction) {
+  const uint8_t diff = mask32_AtoB_shifted(instruction, 31, 31);
 
+  if (!diff) { //Load literal
+    loadStoreLdLitHandler(instruction);
+  } else {
+    const uint8_t u = mask32_AtoB_shifted(instruction, 24, 24);
+    if (u) { //Unsigned offset
+      loadStoreUnsgnOffHandler(instruction);
+    } else {
+      const uint8_t diff2 = mask32_AtoB_shifted(instruction, 21, 21);
+      if (diff2) { //Register offset
+        loadStoreRegOffHandler(instruction);
+      } else { // Pre/Post-index
+        loadStorePIndexHandler(instruction);
+      }
+    }
+  }
 }
+
+void loadStoreLdLitHandler(uint32_t instruction) {
+  const uint32_t simm19 = mask32_AtoB_shifted(instruction, 23, 5);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
+  const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
+
+  uint64_t offset = simm19 << 2;
+  offset = sExtend64(offset, 20);
+
+  uint64_t address = read64(&sRegisters.PC) + offset;
+
+  if (sf) { //64-bit
+    uint64_t result = 0;
+    for (int i = 0; i < 8; i++) {
+      result += memory[address + i] << (8 * i);
+    }
+    write32(&gRegisters[rt], result);
+  } else {
+    uint32_t result = 0;
+    for (int i = 0; i < 4; i++) {
+      result += memory[address + i] << (8 * i);
+    }
+    write32(&gRegisters[rt], result);
+  }
+}
+
+void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address) {
+  if (l) { //Load
+    if (sf) {
+      uint64_t data = 0;
+      for (int i = 0; i < 8; i++) {
+        data += memory[address + i] << (4 * i);
+      }
+      write64(&gRegisters[rt], data);
+    } else {
+      uint32_t data = 0;
+      for (int i = 0; i < 4; i++) {
+        data += memory[address + i] << (4 * i);
+      }
+      write32(&gRegisters[rt], data);
+    }
+  } else { //Store
+    if (sf) {
+      uint64_t data = read64(&gRegisters[rt]);
+      for (int i = 0; i < 8; i++) {
+        memory[address + i] = data & 0xF;
+        data = data >> 4;
+      }
+    } else {
+      uint32_t data = read32(&gRegisters[rt]);
+      for (int i = 0; i < 4; i++) {
+        memory[address + i] = data & 0xF;
+        data = data >> 4;
+      }
+    }
+  }
+}
+
+void loadStoreUnsgnOffHandler(uint32_t instruction) {
+  const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
+  const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
+  const uint16_t imm12 = mask32_AtoB_shifted(instruction, 21, 10);
+  const uint8_t l = mask32_AtoB_shifted(instruction, 22, 22);
+
+  uint64_t uoffset;
+  int msb;
+  if (sf) {
+    uoffset = imm12 << 3;
+    msb = 14;
+  } else {
+    uoffset = imm12 << 2;
+    msb = 13;
+  }
+
+  uint64_t address = sExtend64(uoffset, msb) + read64(&gRegisters[xn]);
+
+  loadStoreHelperHandler(l, sf, rt, address);
+}
+
+void loadStoreRegOffHandler(uint32_t instruction) {
+  const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
+  const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
+  const uint16_t xm = mask32_AtoB_shifted(instruction, 20, 16);
+  const uint8_t l = mask32_AtoB_shifted(instruction, 22, 22);
+
+  uint64_t address = read64(&gRegisters[xm]) + read64(&gRegisters[xn]);
+
+  loadStoreHelperHandler(l, sf, rt, address);
+}
+
+void loadStorePIndexHandler(uint32_t instruction) {
+  const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
+  const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
+  const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
+  const uint16_t simm9 = mask32_AtoB_shifted(instruction, 20, 12);
+  const uint8_t l = mask32_AtoB_shifted(instruction, 22, 22);
+  const uint8_t i = mask32_AtoB_shifted(instruction, 11, 11);
+
+  if (i) { //Pre-indexed
+    uint64_t address = read64(&gRegisters[xn]) + sExtend64(simm9, 8);
+    write64(&gRegisters[xn], address);
+    loadStoreHelperHandler(l, sf, rt, address);
+  } else { //Post-indexed
+    uint64_t address = read64(&gRegisters[xn]);
+    loadStoreHelperHandler(l, sf, rt, address);
+    address +=  + sExtend64(simm9, 8);
+    write64(&gRegisters[xn], address);
+  }
+}
+
 
 //Branches are either register, immediate or immediate conditional, based on the first 3 bits
 void branchHandler(uint32_t instruction) {
@@ -538,12 +673,8 @@ void branchHandler(uint32_t instruction) {
     //Find base shift
     uint32_t shift = mask32_AtoB_shifted(instruction, 25, 0) << 2;
     //Extend sign if MSB is 1
-    if (shift & 0b00001000000000000000000000000000) {
-      shift = instruction | 0b11111100000000000000000000000000;
-      write64(&sRegisters.PC, read64(&sRegisters.PC) - twos(shift));
-    } else {
-      write64(&sRegisters.PC, read64(&sRegisters.PC) + shift);
-    }
+    shift = sExtend32(shift, 27);
+    write64(&sRegisters.PC, read64(&sRegisters.PC) + shift);
     return;
   }
 
@@ -582,13 +713,8 @@ void branchHandler(uint32_t instruction) {
     //Find base shift
     uint32_t shift = mask32_AtoB_shifted(instruction, 23 ,5) << 2;
     //Extend sign if MSB is 1
-    if (shift & 0b100000000000000000000) {
-      shift = shift | 0b11111111111000000000000000000000;
-      write64(&sRegisters.PC, read64(&sRegisters.PC) - twos(shift));
-    } else {
-      write64(&sRegisters.PC, read64(&sRegisters.PC) + shift);
-    }
-
+    shift = sExtend32(shift, 27);
+    write64(&sRegisters.PC, read64(&sRegisters.PC) + shift);
     return;
   }
 }
@@ -696,4 +822,24 @@ void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64
   else {
     sRegisters.pstate.C = a >= b;
   }
+}
+
+uint64_t sExtend64(uint64_t value, int msb) {
+  if (value & (1 << msb)) { //If msb
+    uint64_t bits = 0;
+    bits = bits - 0b1;
+    bits = (bits >> (msb + 1)) << (msb + 1);
+    return value | bits;
+  }
+  return value;
+}
+
+uint32_t sExtend32(uint32_t value, int msb) {
+  if (value & (1 << msb)) { //If msb
+    uint64_t bits = 0;
+    bits = bits - 0b1;
+    bits = (bits >> (msb + 1)) << (msb + 1);
+    return value | bits;
+  }
+  return value;
 }
