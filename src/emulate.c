@@ -734,7 +734,12 @@ void printEnd(FILE *ptr) {
   if(sRegisters.pstate.Z) fprintf(ptr, "Z"); else fprintf(ptr, "-");
   if(sRegisters.pstate.C) fprintf(ptr, "C"); else fprintf(ptr, "-");
   if(sRegisters.pstate.V) fprintf(ptr, "V\n"); else fprintf(ptr, "-\n");
-  //TODO: Output used memory
+  for (int i = 0; i < MB2; i += 4) {
+    uint32_t word = fetch32(i);
+    if (word) {
+      fprintf(ptr, "0x%08lx: %08lx\n", i, word);
+    }
+  }
 }
 
 //Writes unless zero reg, since 32 bits, moves to the front of register by LSL
