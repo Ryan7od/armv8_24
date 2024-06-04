@@ -9,8 +9,6 @@ struct SA_pair {
     int address;
 };
 
-
-
 struct list {
     struct SA_pair *data;
     int numItems;
