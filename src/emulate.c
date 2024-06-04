@@ -707,7 +707,10 @@ void branchHandler(uint32_t instruction) {
         break;
     }
 
-    if (!condition) return;
+    if (!condition) {
+      write64(&sRegisters.PC, read64(&sRegisters.PC) + 4);
+      return;
+    }
 
     //Find base shift
     uint32_t shift = mask32_AtoB_shifted(instruction, 23 ,5) << 2;
