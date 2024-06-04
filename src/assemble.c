@@ -10,6 +10,7 @@ struct SA_pair {
 };
 
 
+
 struct list {
     struct SA_pair *data;
     int numItems;
