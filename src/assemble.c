@@ -13,7 +13,6 @@ struct SA_pair {
     int address;
 };
 
-
 struct list {
     struct SA_pair *data;
     int numItems;
@@ -28,11 +27,13 @@ typedef struct {
     char operand[MAX_OPERANDS];
 } InstructionIR;
 
-
-
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
+<<<<<<< src/assemble.c
+void parser(char *line);
+=======
 static void parser(char *line);
 char* DataProcessingInstruction(InstructionIR instruction);
+>>>>>>> src/assemble.c
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
@@ -82,7 +83,30 @@ void fileProcessor(const char *filename) {
     free(line);
     fclose(file);
 }
+<<<<<<< src/assemble.c
+
+void tokenizer(char instruction[]) {
+    char* mne = strtok(instruction, " ");
+    char* ops = strtok(NULL, " ");
+    printf("%s\n", mne);
+    printf("%s\n", ops);
+    char* operand;
+    char* operands[4];
+    int operand_count = 0;
+    operand = strtok(ops, ",");
+    while (operand != NULL && operand_count < 4) {
+        operands[operand_count++] = operand;
+        operand = strtok(NULL, ",");
+    }
+    // Print the operands
+    for (int i = 0; i < operand_count; i++) {
+        printf("Operand %d: %s\n", i + 1, operands[i]);
+    }
+}
+
+
 static void parser(char *line) {
+>>>>>>> src/assemble.c
     char *s = line;
     if (*s == '.') {
         printf("d");
