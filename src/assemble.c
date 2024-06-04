@@ -4,8 +4,12 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+#define MaxLineLength 30
+#define SymbolTableSize 20
+
+
 struct SA_pair {
-    char Symbol[100];
+    char *Symbol;
     int address;
 };
 
@@ -14,8 +18,7 @@ struct list {
     int numItems;
     int size;
 };
-#define MaxLineLength 30
-#define SymbolTableSize 20
+
 typedef enum {instruction, directive, label} LineType;
 
 #define MAX_OPERANDS 4
@@ -25,13 +28,19 @@ typedef struct {
 } InstructionIR;
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
+<<<<<<< src/assemble.c
 void parser(char *line);
+=======
+static void parser(char *line);
+char* DataProcessingInstruction(InstructionIR instruction);
+>>>>>>> src/assemble.c
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
     SymbolTable.numItems = 0;
     SymbolTable.size = SymbolTableSize;
     SymbolTable.data = malloc(SymbolTable.size * sizeof(struct SA_pair));
+
 
     if (SymbolTable.data == NULL) {
         printf("memory allocation failed");
@@ -74,6 +83,7 @@ void fileProcessor(const char *filename) {
     free(line);
     fclose(file);
 }
+<<<<<<< src/assemble.c
 
 void tokenizer(char instruction[]) {
     char* mne = strtok(instruction, " ");
@@ -94,8 +104,21 @@ void tokenizer(char instruction[]) {
     }
 }
 
-void parser(char *line) {
+
+static void parser(char *line) {
+>>>>>>> src/assemble.c
     char *s = line;
-    while (isspace(*s)) { s++; };
+    if (*s == '.') {
+        printf("d");
+    } else  {
+        char *temp = line;
+        char *end = line;
+        while (*end != '\0') {temp = end; end++;}
+        if (*temp == ':' && isalpha(*s)) {
+            printf("lbl");
+        } else {
+            printf("instr");
+        }
+    }
 }
 
