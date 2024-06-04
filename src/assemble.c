@@ -6,10 +6,10 @@
 
 #define MaxLineLength 30
 #define SymbolTableSize 20
-#define MAX_SYMBOL 100
+
 
 struct SA_pair {
-    char Symbol[MAX_SYMBOL];
+    char *Symbol;
     int address;
 };
 
@@ -31,7 +31,7 @@ typedef struct {
 
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
-void parser(char *line);
+static void parser(char *line);
 char* DataProcessingInstruction(InstructionIR instruction);
 
 int main(int argc, char **argv) {
@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
     SymbolTable.numItems = 0;
     SymbolTable.size = SymbolTableSize;
     SymbolTable.data = malloc(SymbolTable.size * sizeof(struct SA_pair));
+
 
     if (SymbolTable.data == NULL) {
         printf("memory allocation failed");
@@ -81,18 +82,18 @@ void fileProcessor(const char *filename) {
     free(line);
     fclose(file);
 }
-void parser(char *line) {
+static void parser(char *line) {
     char *s = line;
     if (*s == '.') {
-        //TODO
+        printf("d");
     } else  {
         char *temp = line;
         char *end = line;
         while (*end != '\0') {temp = end; end++;}
         if (*temp == ':' && isalpha(*s)) {
-            //TODO
+            printf("lbl");
         } else {
-            //TODO
+            printf("instr");
         }
     }
 }
