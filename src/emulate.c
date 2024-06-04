@@ -87,10 +87,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  for (int  i = 0; i < 16; i++) {
-    printf("%x", memory[i]);
-  }
-
   //Run through each step
   uint32_t instruction = fetch32(sRegisters.PC);
 
@@ -725,7 +721,7 @@ void branchHandler(uint32_t instruction) {
 //Prints out final states
 void printEnd(FILE *ptr) {
   for (int i = 0; i < 32; i++) {
-    if (i < 10) fprintf(ptr, "X%i  = %016llx\n", i, read64(&gRegisters[i]));
+    if (i < 10) fprintf(ptr, "X0%i = %016llx\n", i, read64(&gRegisters[i]));
     else fprintf(ptr, "X%i = %016llx\n", i, read64(&gRegisters[i]));
   }
   fprintf(ptr, "PC  = %016llx\n", read64(&sRegisters.PC));
