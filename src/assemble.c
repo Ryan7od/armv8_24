@@ -24,11 +24,8 @@ typedef struct {
     char operand[MAX_OPERANDS];
 } InstructionIR;
 
-
-
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
 void parser(char *line);
-
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
