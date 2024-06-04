@@ -87,6 +87,10 @@ int main(int argc, char **argv) {
     }
   }
 
+  for (int  i = 0; i < 16; i++) {
+    printf("%x", memory[i]);
+  }
+
   //Run through each step
   uint32_t instruction = fetch32(sRegisters.PC);
 
@@ -123,7 +127,7 @@ int main(int argc, char **argv) {
         skip = true;
         break;
       default:
-        printf("Error: Non implemented instruction");
+        //printf("Error: Non implemented instruction");
         break;
     }
 
@@ -757,8 +761,7 @@ uint64_t read64(Register* reg) {
 }
 
 uint32_t fetch32(int index) {
-  if (index + 3 >= 2097152) return -1;
-  return memory[index] + memory[index+1] << 4 + memory[index+2] << 8 + memory[index+3] << 12;
+  return memory[index] + (memory[index+1] << 8) + (memory[index+2] << 16) + (memory[index+3] << 24);
 }
 
 uint32_t twos(uint32_t num) {
