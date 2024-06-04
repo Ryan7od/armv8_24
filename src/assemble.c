@@ -28,12 +28,12 @@ typedef struct {
 } InstructionIR;
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
-<<<<<<< src/assemble.c
-void parser(char *line);
-=======
+
+
+
 static void parser(char *line);
 char* DataProcessingInstruction(InstructionIR instruction);
->>>>>>> src/assemble.c
+
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
@@ -83,7 +83,7 @@ void fileProcessor(const char *filename) {
     free(line);
     fclose(file);
 }
-<<<<<<< src/assemble.c
+
 
 void tokenizer(char instruction[]) {
     char* mne = strtok(instruction, " ");
@@ -106,7 +106,7 @@ void tokenizer(char instruction[]) {
 
 
 static void parser(char *line) {
->>>>>>> src/assemble.c
+
     char *s = line;
     if (*s == '.') {
         printf("d");
