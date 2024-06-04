@@ -78,6 +78,26 @@ void fileProcessor(const char *filename) {
     free(line);
     fclose(file);
 }
+
+void tokenizer(char instruction[]) {
+    char* mne = strtok(instruction, " ");
+    char* ops = strtok(NULL, " ");
+    printf("%s\n", mne);
+    printf("%s\n", ops);
+    char* operand;
+    char* operands[4];
+    int operand_count = 0;
+    operand = strtok(ops, ",");
+    while (operand != NULL && operand_count < 4) {
+        operands[operand_count++] = operand;
+        operand = strtok(NULL, ",");
+    }
+    // Print the operands
+    for (int i = 0; i < operand_count; i++) {
+        printf("Operand %d: %s\n", i + 1, operands[i]);
+    }
+}
+
 void parser(char *line) {
     char *s = line;
     while (isspace(*s)) { s++; };
