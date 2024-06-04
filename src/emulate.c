@@ -99,8 +99,7 @@ int main(int argc, char **argv) {
     //Define skip for if branch set
     bool skip = false;
     //Defined mask & isolate bits 28-5 to get op0
-    uint32_t mask = 0xF << 25;
-    uint8_t op0 = (instruction & mask) >> 25;
+    uint8_t op0 = mask32_AtoB_shifted(instruction, 28, 25);
     //Switch case to send to different operation handlers
     switch (op0) {
       //100x Data Processing (Immediate)
