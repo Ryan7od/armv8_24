@@ -8,6 +8,8 @@
 #define SymbolTableSize 20
 
 
+
+
 struct SA_pair {
     char *Symbol;
     int address;
@@ -27,13 +29,13 @@ typedef struct {
     char operand[MAX_OPERANDS];
 } InstructionIR;
 
+typedef void (*functionptr)(InstructionIR);
+
+
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
-<<<<<<< src/assemble.c
-void parser(char *line);
-=======
 static void parser(char *line);
 char* DataProcessingInstruction(InstructionIR instruction);
->>>>>>> src/assemble.c
+static void FunctionClassifier(InstructionIR instruction);
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
@@ -83,7 +85,7 @@ void fileProcessor(const char *filename) {
     free(line);
     fclose(file);
 }
-<<<<<<< src/assemble.c
+
 
 void tokenizer(char instruction[]) {
     char* mne = strtok(instruction, " ");
@@ -106,7 +108,6 @@ void tokenizer(char instruction[]) {
 
 
 static void parser(char *line) {
->>>>>>> src/assemble.c
     char *s = line;
     if (*s == '.') {
         printf("d");
@@ -117,8 +118,13 @@ static void parser(char *line) {
         if (*temp == ':' && isalpha(*s)) {
             printf("lbl");
         } else {
-            printf("instr");
+            tokenizer(line);
         }
     }
 }
+
+static void FunctionClassifier(InstructionIR instruction) {
+    
+}
+
 
