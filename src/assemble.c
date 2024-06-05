@@ -39,9 +39,44 @@ typedef struct {
 
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
+
+
+
+
+static void parser(char *line);
+char* DataProcessingInstruction(InstructionIR instruction);
+
+// Function pointer type for instruction parsers
+
+
+// Function declarations
+void parseBranch(InstructionIR instruction);
+void parseLoadStore(InstructionIR instruction);
+void parseDataProcessing(InstructionIR instruction);
+
+// Struct to map mnemonics to functions
+typedef struct {
+    const char* mnemonic;
+    InstructionParser parser;
+} InstructionMapping;
+
+// Parsing functions
+void parseBranch(InstructionIR instruction) {
+    printf("Parsing Branch instruction: %s\n", instruction);
+}
+
+void parseLoadStore(InstructionIR instruction) {
+    printf("Parsing Load/Store instruction: %s\n", instruction);
+}
+
+void parseDataProcessing(InstructionIR instruction) {
+    printf("Parsing Data Processing instruction: %s\n", instruction);
+}
+
 static void parser(char *line);
 char* DataProcessingInstruction(InstructionIR instruction);
 static void FunctionClassifier(InstructionIR instruction);
+
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
@@ -53,6 +88,68 @@ int main(int argc, char **argv) {
     if (SymbolTable.data == NULL) {
         printf("memory allocation failed");
         return 1;
+    }
+
+    // Create an array of instruction mappings
+    InstructionMapping mappings[] = {
+            {"b", parseBranch},
+            {"b.cond", parseBranch},
+            {"br", parseBranch},
+            {"str", parseLoadStore},
+            {"ldr", parseLoadStore},
+            {"add", parseDataProcessing},
+            {"adds", parseDataProcessing},
+            {"sub", parseDataProcessing},
+            {"subs", parseDataProcessing},
+            {"cmp", parseDataProcessing},
+            {"cmn", parseDataProcessing},
+            {"neg", parseDataProcessing},
+            {"negs", parseDataProcessing},
+            {"and", parseDataProcessing},
+            {"ands", parseDataProcessing},
+            {"bic", parseDataProcessing},
+            {"bics", parseDataProcessing},
+            {"eor", parseDataProcessing},
+            {"orr", parseDataProcessing},
+            {"eon", parseDataProcessing},
+            {"orn", parseDataProcessing},
+            {"tst", parseDataProcessing},
+            {"movk", parseDataProcessing},
+            {"movn", parseDataProcessing},
+            {"movz", parseDataProcessing},
+            {"mov", parseDataProcessing},
+            {"mvn", parseDataProcessing},
+            {"madd", parseDataProcessing},
+            {"msub", parseDataProcessing},
+            {"mul", parseDataProcessing},
+            {"mneg", parseDataProcessing},
+            // Add more mappings as needed
+    };
+
+    size_t mappingCount = sizeof(mappings) / sizeof(mappings[0]);
+
+    // Example instruction mnemonics
+    const char* instructions[] = {
+            "BRANCH X1, X2, X3",
+            "LOAD R1, [R2]",
+            "STORE R1, [R2]",
+            "ADD R1, R2, R3",
+            "SUB R4, R5, R6"
+    };
+
+    // Iterate over example instructions and parse them
+    for (size_t i = 0; i < sizeof(instructions) / sizeof(instructions[0]); ++i) {
+        // Extract the mnemonic (first word of the instruction)
+        char mnemonic[16];
+        sscanf(instructions[i], "%15s", mnemonic);
+
+        // Get the parser function
+        InstructionParser parser = getParser(mnemonic, mappings, mappingCount);
+        if (parser) {
+            parser(instructions[i]);
+        } else {
+            printf("Unknown instruction: %s\n", instructions[i]);
+        }
     }
 
   return EXIT_SUCCESS;
@@ -114,20 +211,27 @@ void tokenizer(char instruction[]) {
 
 
 static void parser(char *line) {
+
     char *s = line;
     if (*s == '.') {
         printf("d");
-    } else  {
+    } else {
         char *temp = line;
         char *end = line;
-        while (*end != '\0') {temp = end; end++;}
+        while (*end != '\0') {
+            temp = end;
+            end++;
+        }
         if (*temp == ':' && isalpha(*s)) {
             printf("lbl");
         } else {
             tokenizer(line);
         }
     }
+
 }
+
+
 
 static InstructionParser FunctionClassifier(InstructionIR instruction, InstructionMapping* mappings, size_t mapSize) {
     for (size_t i = 0; i < mapSize; i++) {
@@ -135,5 +239,6 @@ static InstructionParser FunctionClassifier(InstructionIR instruction, Instructi
     }
     return NULL;
 }
+
 
 
