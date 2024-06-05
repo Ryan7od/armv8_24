@@ -29,7 +29,13 @@ typedef struct {
     char operand[MAX_OPERANDS];
 } InstructionIR;
 
-typedef void (*functionptr)(InstructionIR);
+typedef void (*InstructionParser)(InstructionIR);
+
+
+typedef struct {
+    const char* mnemonic;
+    InstructionParser parser;
+} InstructionMapping;
 
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
@@ -123,8 +129,11 @@ static void parser(char *line) {
     }
 }
 
-static void FunctionClassifier(InstructionIR instruction) {
-    
+static InstructionParser FunctionClassifier(InstructionIR instruction, InstructionMapping* mappings, size_t mapSize) {
+    for (size_t i = 0; i < mapSize; i++) {
+        if (strcmp(instruction.opcode, mappings[0].mnemonic) == 0) {return  mappings[0].parser;}
+    }
+    return NULL;
 }
 
 
