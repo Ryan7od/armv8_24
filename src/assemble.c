@@ -34,6 +34,43 @@ void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
 static void parser(char *line);
 char* DataProcessingInstruction(InstructionIR instruction);
 
+// Function pointer type for instruction parsers
+typedef void (*InstructionParser)(const char*);
+
+// Function declarations
+void parseBranch(const char* instruction);
+void parseLoadStore(const char* instruction);
+void parseDataProcessing(const char* instruction);
+
+// Struct to map mnemonics to functions
+typedef struct {
+    const char* mnemonic;
+    InstructionParser parser;
+} InstructionMapping;
+
+// Parsing functions
+void parseBranch(const char* instruction) {
+    printf("Parsing Branch instruction: %s\n", instruction);
+}
+
+void parseLoadStore(const char* instruction) {
+    printf("Parsing Load/Store instruction: %s\n", instruction);
+}
+
+void parseDataProcessing(const char* instruction) {
+    printf("Parsing Data Processing instruction: %s\n", instruction);
+}
+
+// Function to find the parser based on mnemonic
+InstructionParser getParser(const char* mnemonic, InstructionMapping* mappings, size_t mappingCount) {
+    for (size_t i = 0; i < mappingCount; ++i) {
+        if (strcmp(mnemonic, mappings[i].mnemonic) == 0) {
+            return mappings[i].parser;
+        }
+    }
+    return NULL; // Return NULL if no matching parser is found
+}
+
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
@@ -45,6 +82,42 @@ int main(int argc, char **argv) {
     if (SymbolTable.data == NULL) {
         printf("memory allocation failed");
         return 1;
+    }
+
+    // Create an array of instruction mappings
+    InstructionMapping mappings[] = {
+            {"BRANCH", parseBranch},
+            {"LOAD", parseLoadStore},
+            {"STORE", parseLoadStore},
+            {"ADD", parseDataProcessing},
+            {"SUB", parseDataProcessing},
+            // Add more mappings as needed
+    };
+
+    size_t mappingCount = sizeof(mappings) / sizeof(mappings[0]);
+
+    // Example instruction mnemonics
+    const char* instructions[] = {
+            "BRANCH X1, X2, X3",
+            "LOAD R1, [R2]",
+            "STORE R1, [R2]",
+            "ADD R1, R2, R3",
+            "SUB R4, R5, R6"
+    };
+
+    // Iterate over example instructions and parse them
+    for (size_t i = 0; i < sizeof(instructions) / sizeof(instructions[0]); ++i) {
+        // Extract the mnemonic (first word of the instruction)
+        char mnemonic[16];
+        sscanf(instructions[i], "%15s", mnemonic);
+
+        // Get the parser function
+        InstructionParser parser = getParser(mnemonic, mappings, mappingCount);
+        if (parser) {
+            parser(instructions[i]);
+        } else {
+            printf("Unknown instruction: %s\n", instructions[i]);
+        }
     }
 
   return EXIT_SUCCESS;
@@ -110,10 +183,13 @@ static void parser(char *line) {
     char *s = line;
     if (*s == '.') {
         printf("d");
-    } else  {
+    } else {
         char *temp = line;
         char *end = line;
-        while (*end != '\0') {temp = end; end++;}
+        while (*end != '\0') {
+            temp = end;
+            end++;
+        }
         if (*temp == ':' && isalpha(*s)) {
             printf("lbl");
         } else {
@@ -121,4 +197,3 @@ static void parser(char *line) {
         }
     }
 }
-
