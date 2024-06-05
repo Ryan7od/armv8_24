@@ -38,9 +38,9 @@ char* DataProcessingInstruction(InstructionIR instruction);
 typedef void (*InstructionParser)(const char*);
 
 // Function declarations
-void parseBranch(const char* instruction);
-void parseLoadStore(const char* instruction);
-void parseDataProcessing(const char* instruction);
+void parseBranch(InstructionIR instruction);
+void parseLoadStore(InstructionIR instruction);
+void parseDataProcessing(InstructionIR instruction);
 
 // Struct to map mnemonics to functions
 typedef struct {
@@ -49,15 +49,15 @@ typedef struct {
 } InstructionMapping;
 
 // Parsing functions
-void parseBranch(const char* instruction) {
+void parseBranch(InstructionIR instruction) {
     printf("Parsing Branch instruction: %s\n", instruction);
 }
 
-void parseLoadStore(const char* instruction) {
+void parseLoadStore(InstructionIR instruction) {
     printf("Parsing Load/Store instruction: %s\n", instruction);
 }
 
-void parseDataProcessing(const char* instruction) {
+void parseDataProcessing(InstructionIR instruction) {
     printf("Parsing Data Processing instruction: %s\n", instruction);
 }
 
@@ -86,11 +86,37 @@ int main(int argc, char **argv) {
 
     // Create an array of instruction mappings
     InstructionMapping mappings[] = {
-            {"BRANCH", parseBranch},
-            {"LOAD", parseLoadStore},
-            {"STORE", parseLoadStore},
-            {"ADD", parseDataProcessing},
-            {"SUB", parseDataProcessing},
+            {"b", parseBranch},
+            {"b.cond", parseBranch},
+            {"br", parseBranch},
+            {"str", parseLoadStore},
+            {"ldr", parseLoadStore},
+            {"add", parseDataProcessing},
+            {"adds", parseDataProcessing},
+            {"sub", parseDataProcessing},
+            {"subs", parseDataProcessing},
+            {"cmp", parseDataProcessing},
+            {"cmn", parseDataProcessing},
+            {"neg", parseDataProcessing},
+            {"negs", parseDataProcessing},
+            {"and", parseDataProcessing},
+            {"ands", parseDataProcessing},
+            {"bic", parseDataProcessing},
+            {"bics", parseDataProcessing},
+            {"eor", parseDataProcessing},
+            {"orr", parseDataProcessing},
+            {"eon", parseDataProcessing},
+            {"orn", parseDataProcessing},
+            {"tst", parseDataProcessing},
+            {"movk", parseDataProcessing},
+            {"movn", parseDataProcessing},
+            {"movz", parseDataProcessing},
+            {"mov", parseDataProcessing},
+            {"mvn", parseDataProcessing},
+            {"madd", parseDataProcessing},
+            {"msub", parseDataProcessing},
+            {"mul", parseDataProcessing},
+            {"mneg", parseDataProcessing},
             // Add more mappings as needed
     };
 
