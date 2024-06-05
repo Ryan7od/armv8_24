@@ -8,6 +8,8 @@
 #define SymbolTableSize 20
 
 
+
+
 struct SA_pair {
     char *Symbol;
     int address;
@@ -27,7 +29,17 @@ typedef struct {
     char operand[MAX_OPERANDS];
 } InstructionIR;
 
+typedef void (*InstructionParser)(InstructionIR);
+
+
+typedef struct {
+    const char* mnemonic;
+    InstructionParser parser;
+} InstructionMapping;
+
+
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
+
 
 
 
@@ -35,7 +47,7 @@ static void parser(char *line);
 char* DataProcessingInstruction(InstructionIR instruction);
 
 // Function pointer type for instruction parsers
-typedef void (*InstructionParser)(const char*);
+
 
 // Function declarations
 void parseBranch(InstructionIR instruction);
@@ -61,15 +73,9 @@ void parseDataProcessing(InstructionIR instruction) {
     printf("Parsing Data Processing instruction: %s\n", instruction);
 }
 
-// Function to find the parser based on mnemonic
-InstructionParser getParser(const char* mnemonic, InstructionMapping* mappings, size_t mappingCount) {
-    for (size_t i = 0; i < mappingCount; ++i) {
-        if (strcmp(mnemonic, mappings[i].mnemonic) == 0) {
-            return mappings[i].parser;
-        }
-    }
-    return NULL; // Return NULL if no matching parser is found
-}
+static void parser(char *line);
+char* DataProcessingInstruction(InstructionIR instruction);
+static void FunctionClassifier(InstructionIR instruction);
 
 
 int main(int argc, char **argv) {
@@ -219,7 +225,20 @@ static void parser(char *line) {
         if (*temp == ':' && isalpha(*s)) {
             printf("lbl");
         } else {
-            printf("instr");
+            tokenizer(line);
         }
     }
+
 }
+
+
+
+static InstructionParser FunctionClassifier(InstructionIR instruction, InstructionMapping* mappings, size_t mapSize) {
+    for (size_t i = 0; i < mapSize; i++) {
+        if (strcmp(instruction.opcode, mappings[0].mnemonic) == 0) {return  mappings[0].parser;}
+    }
+    return NULL;
+}
+
+
+
