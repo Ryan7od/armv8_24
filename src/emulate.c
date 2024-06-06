@@ -276,7 +276,7 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
   }
 
   uint64_t newBit = 0; // Initialise outside case
-  int shift;
+  int Rshift;
   //Shift op2
   switch (shift) {
     //lsl
@@ -303,10 +303,10 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
     //ror
     case (0b11):
       //Rotation based on bits
-      if (sf) shift = 63; else shift = 31;
+      if (sf) Rshift = 63; else Rshift = 31;
       for (int i = 0; i < operand; i++) {
         //Shifts op2 to right and wraps round last bit
-        op2 = (op2 >> 1) | ((op2 & 0b1) << shift);
+        op2 = (op2 >> 1) | ((op2 & 0b1) << Rshift);
       }
       break;
     default:
@@ -448,6 +448,7 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
 
   imm16 = imm16 << (hw << 4); //Shifted by hw * 16
 
+  uint64_t mask = 0;
   switch (opc) {
     //movn
     case (0b00):
@@ -467,7 +468,7 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
       break;
     //movk
     case (0b11):
-      uint64_t mask = 0xFFFF << hw;
+      mask = 0xFFFF << hw;
       //Mask used to keep values from last register
       if (sf) {
         uint64_t write = (read64(&gRegisters[rd]) & ~mask) & imm16;
