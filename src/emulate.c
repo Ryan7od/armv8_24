@@ -434,7 +434,7 @@ void dataProcessingImmHandler(uint32_t instruction) {
       dataProcessingImmWideMoveHandler(instruction);
       break;
     default:
-      // TODO: Error
+      fprintf(stderr, "Error: Unknown data processing immediate instruction");
       break;
   }
 }
@@ -448,7 +448,7 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
 
   imm16 = imm16 << (hw << 4); //Shifted by hw * 16
 
-  uint64_t mask = 0;
+  uint64_t mask; // Initialise mask
   switch (opc) {
     //movn
     case (0b00):
@@ -781,7 +781,7 @@ uint32_t twos(uint32_t num) {
 uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   // Check for invalid bit positions
   if (a < b || a > 31 || b > 31) {
-    printf("Error: Invalid a: %u or b: %u", a, b);
+    fprintf(stderr, "Error: Invalid a: %u or b: %u\n", a, b);
     return 0;
   }
   // Create mask from a and b via 1 shifted by difference of a and b + 1 minus 1 then shifted by a
