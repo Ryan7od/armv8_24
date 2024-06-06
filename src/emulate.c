@@ -154,14 +154,14 @@ void dataProcessingRegHandler(uint32_t instruction) {
       case (0b1000):
         dataProcessingRegArithHandler(instruction);
         break;
-      //Bit-Logic
+      //Bit-Logic (0xxx)
       case (0b0000):
-      case (0b0100):
-      case (0b0010):
       case (0b0001):
-      case (0b0110):
-      case (0b0101):
+      case (0b0010):
       case (0b0011):
+      case (0b0100):
+      case (0b0101):
+      case (0b0110):
       case (0b0111):
         dataProcessingRegLogicHandler(instruction);
         break;
@@ -194,6 +194,7 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
     op2 = read32(&gRegisters[rm]);
   }
 
+  uint64_t newBit = 0; // Initialise newBit
   //Shift op2
   switch (shift) {
     //lsl
@@ -206,7 +207,8 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
       break;
     //asr
     case (0b10):
-      uint64_t newBit = (operand & 0b1000) >> 3;
+
+      newBit = (operand & 0b1000) >> 3;
       if (newBit) {
         //Put it to the right position based on sf
         if (sf) newBit = newBit << 31; else newBit = newBit << 63;
@@ -248,14 +250,16 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
 }
 
 void dataProcessingRegLogicHandler(uint32_t instruction) {
-  const uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
+
   const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
   const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
   const uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
   const uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
+  const uint8_t n = mask32_AtoB_shifted(instruction, 21, 21);
+  const uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
   const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
   const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
-  const uint8_t n = mask32_AtoB_shifted(instruction, 21, 21);
+
 
   uint64_t op1;
   if (sf) {
@@ -271,6 +275,8 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
     op2 = read32(&gRegisters[rm]);
   }
 
+  uint64_t newBit = 0; // Initialise outside case
+  int shift;
   //Shift op2
   switch (shift) {
     //lsl
@@ -283,7 +289,7 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
       break;
     //asr
     case (0b10):
-      uint64_t newBit = (operand & 0b1000) >> 3;
+      newBit = (operand & 0b1000) >> 3;
       if (newBit) {
         //Put it to the right position based on sf
         if (sf) newBit = newBit << 31; else newBit = newBit << 63;
@@ -297,7 +303,6 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
     //ror
     case (0b11):
       //Rotation based on bits
-      int shift;
       if (sf) shift = 63; else shift = 31;
       for (int i = 0; i < operand; i++) {
         //Shifts op2 to right and wraps round last bit
