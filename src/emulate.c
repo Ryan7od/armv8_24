@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
       *memPtr++ = buffer[i];
     }
   }
-
+  
   //Run through each step
   uint32_t instruction = fetch32(sRegisters.PC);
 
@@ -587,14 +587,14 @@ void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address)
     if (sf) {
       uint64_t data = read64(&gRegisters[rt]);
       for (int i = 0; i < 8; i++) {
-        memory[address + i] = data & 0xF;
-        data = data >> 4;
+        memory[address + i] = data & 0xFF;
+        data = data >> 8;
       }
     } else {
       uint32_t data = read32(&gRegisters[rt]);
       for (int i = 0; i < 4; i++) {
-        memory[address + i] = data & 0xF;
-        data = data >> 4;
+        memory[address + i] = data & 0xFF;
+        data = data >> 8;
       }
     }
   }
