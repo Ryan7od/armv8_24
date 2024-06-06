@@ -566,10 +566,11 @@ void loadStoreLoadLiteralHandler(uint32_t instruction) {
   if (sf) { //64 bit
     uint64_t result = 0;
     for (int i = 0; i < 8; i++) {
-      uint16_t mem_i = memory[address + i];
-      result += (mem_i << (8 * i));
+      uint64_t mem_i = memory[address + i];
+      uint64_t mem_i_shifted = mem_i << (8 * i);
+      result = result + mem_i_shifted;
     }
-    write32(&gRegisters[rt], result);
+    write64(&gRegisters[rt], result);
   } else { //32 bit
     uint32_t result = 0;
     for (int i = 0; i < 4; i++) {
