@@ -59,8 +59,8 @@ SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
 int main(int argc, char **argv) {
   //Ensure 1 or 2 arguments
   if (argc != 3 && argc != 2) {
-    printf("Error: wrong number of arguments");
-    return EXIT_FAILURE;
+    fprintf(stderr, "Error: wrong number of arguments");
+    return -1;
   }
 
   //Set output method
@@ -68,18 +68,19 @@ int main(int argc, char **argv) {
   if (argc > 2) {
     outPtr = fopen(argv[2], "w");
     if (outPtr == NULL) {
-      printf("Error: opening %s", argv[2]);
-      return EXIT_FAILURE;
+      fprintf(stderr, "Error: opening %s", argv[2]);
+      return -2;
     }
   }
 
   //Read in file
   FILE *inPtr;
-  inPtr = inPtr = fopen(argv[1], "rb");
+  inPtr = fopen(argv[1], "rb");
   unsigned char buffer[4] = { 0 };
   unsigned char* memPtr = memory;
   if (inPtr == NULL) {
-      return EXIT_FAILURE;
+    fprintf(stderr, "Error: File is null & doesn't exist");
+    return -3;
   }
   while (fread(buffer, sizeof(buffer), 1, inPtr)) {
     for (int i = 0; i < 4; i++) {
@@ -122,8 +123,8 @@ int main(int argc, char **argv) {
         skip = true;
         break;
       default:
-        //printf("Error: Non implemented instruction");
-        break;
+        fprintf(stderr, "Error: Non implemented instruction %x\n", op0);
+        return -4;
     }
 
     if (!skip) {
@@ -131,7 +132,6 @@ int main(int argc, char **argv) {
     }
     instruction = fetch32(sRegisters.PC);
   }
-
 
   printEnd(outPtr);
   //fcloseall();
