@@ -39,8 +39,8 @@ extern void dataProcessingRegLogicHandler(uint32_t instruction);
 extern void dataProcessingRegMultHandler(uint32_t instruction);
 extern void loadStoreHandler(uint32_t instruction);
 extern void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address);
-extern void loadStoreLdLitHandler(uint32_t instruction);
-extern void loadStoreUnsgnOffHandler(uint32_t instruction);
+extern void loadStoreLoadLiteralHandler(uint32_t instruction);
+extern void loadStoreUnsignedOffsetHandler(uint32_t instruction);
 extern void loadStoreRegOffHandler(uint32_t instruction);
 extern void loadStorePIndexHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
@@ -142,12 +142,15 @@ void dataProcessingRegHandler(uint32_t instruction) {
   const uint8_t m = mask32_AtoB_shifted(instruction, 28, 28);
   const uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
 
-  if (m) { //Multiply
+  if (m) { // M = 1
     if (opr == 0b1000) //Just to confirm correct instruction even though mult is the only case of M=1
       dataProcessingRegMultHandler(instruction);
-  } else {
+    else {
+      fprintf(stderr, "Unknown instruction with m flag = 1\n");
+    }
+  } else { // M = 0
     switch (opr) {
-      //Arithmetic
+      //Arithmetic (1xx0)
       case (0b1110):
       case (0b1100):
       case (0b1010):
@@ -250,7 +253,6 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
 }
 
 void dataProcessingRegLogicHandler(uint32_t instruction) {
-
   const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
   const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
   const uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
@@ -262,21 +264,20 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
 
 
   uint64_t op1;
-  if (sf) {
-    op1 = read64(&gRegisters[rn]);
-  } else {
-    op1 = read32(&gRegisters[rn]);
-  }
-
   uint64_t op2;
   if (sf) {
+    op1 = read64(&gRegisters[rn]);
     op2 = read64(&gRegisters[rm]);
   } else {
+    op1 = read32(&gRegisters[rn]);
     op2 = read32(&gRegisters[rm]);
   }
 
-  uint64_t newBit = 0; // Initialise outside case
+    // Ensure 64 or 32 after shift
+
   int Rshift;
+  uint64_t op2signBit;
+
   //Shift op2
   switch (shift) {
     //lsl
@@ -289,12 +290,15 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
       break;
     //asr
     case (0b10):
-      newBit = (operand & 0b1000) >> 3;
-      if (newBit) {
+      if (sf) { // 64
+        op2signBit = (op2 >> 63) << 63;
+      } else { // 32
+        op2signBit = (op2 >> 31) << 31;
+      }
+      if (op2signBit) {
         //Put it to the right position based on sf
-        if (sf) newBit = newBit << 31; else newBit = newBit << 63;
         for (int i = 0; i < operand; i++) {
-          op2 = (op2 >> 1) | newBit;
+          op2 = (op2 >> 1) | op2signBit;
         }
       } else { //Bit is 0 so will be the same effect as lsr
         op2 = op2 >> operand;
@@ -313,8 +317,8 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
       break;
   }
 
-  //Make sure value is still 32 bits if sf
-  if (sf) {
+  //Make sure 32 bits if !sf
+  if (!sf) {
     op2 = (uint32_t) op2;
   }
 
@@ -468,13 +472,14 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
       break;
     //movk
     case (0b11):
-      mask = 0xFFFF << hw;
+      mask = 0xffff;
+      mask = mask << (hw << 4);
       //Mask used to keep values from last register
       if (sf) {
         uint64_t write = (read64(&gRegisters[rd]) & ~mask) | imm16;
         write64(&gRegisters[rd], write);
       } else {
-        uint32_t write = (read32(&gRegisters[rd]) & ~mask) & imm16;
+        uint32_t write = (read32(&gRegisters[rd]) & ~mask) | imm16;
         write32(&gRegisters[rd], write);
       }
       break;
@@ -532,11 +537,11 @@ void loadStoreHandler(uint32_t instruction) {
   const uint8_t diff = mask32_AtoB_shifted(instruction, 31, 31);
 
   if (!diff) { //Load literal
-    loadStoreLdLitHandler(instruction);
+    loadStoreLoadLiteralHandler(instruction);
   } else {
     const uint8_t u = mask32_AtoB_shifted(instruction, 24, 24);
     if (u) { //Unsigned offset
-      loadStoreUnsgnOffHandler(instruction);
+      loadStoreUnsignedOffsetHandler(instruction);
     } else {
       const uint8_t diff2 = mask32_AtoB_shifted(instruction, 21, 21);
       if (diff2) { //Register offset
@@ -548,7 +553,7 @@ void loadStoreHandler(uint32_t instruction) {
   }
 }
 
-void loadStoreLdLitHandler(uint32_t instruction) {
+void loadStoreLoadLiteralHandler(uint32_t instruction) {
   const uint32_t simm19 = mask32_AtoB_shifted(instruction, 23, 5);
   const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
   const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
@@ -561,7 +566,8 @@ void loadStoreLdLitHandler(uint32_t instruction) {
   if (sf) { //64-bit
     uint64_t result = 0;
     for (int i = 0; i < 8; i++) {
-      result += memory[address + i] << (8 * i);
+      uint16_t mem_i = memory[address + i];
+      result += (mem_i << (8 * i));
     }
     write32(&gRegisters[rt], result);
   } else {
@@ -605,7 +611,7 @@ void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address)
   }
 }
 
-void loadStoreUnsgnOffHandler(uint32_t instruction) {
+void loadStoreUnsignedOffsetHandler(uint32_t instruction) {
   const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
   const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
   const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
@@ -762,7 +768,7 @@ void write64(Register* reg, uint64_t val) {
 
 //Reads, since only first 32 bits LSR
 uint32_t read32(Register* reg) {
-  return *reg & 0x0000FFFF;
+  return *reg & 0xFFFFFFFF;
 }
 
 //Reads
@@ -778,7 +784,7 @@ uint32_t twos(uint32_t num) {
   return (~num) + 1;
 }
 
-// Returns the instruction masked from bits a to b inclusive, ensure a >= b, returns 0 if error
+// Returns the instruction masked from bits a to b inclusive, ensure a >= b, returns 0 with error
 uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   // Check for invalid bit positions
   if (a < b || a > 31 || b > 31) {
