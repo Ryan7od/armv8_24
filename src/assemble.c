@@ -21,6 +21,7 @@ struct list {
     int size;
 };
 
+
 typedef enum {instruction, directive, label} LineType;
 
 #define MAX_OPERANDS 4
@@ -31,6 +32,8 @@ typedef struct {
 
 typedef void (*InstructionParser)(InstructionIR, FILE *);
 
+uint32_t data_processing_immediate_code = 1 << 28;
+uint32_t data_processing_register_code = 5 << 27;
 
 typedef struct {
     const char* mnemonic;
@@ -41,6 +44,9 @@ typedef struct {
     const char* mnemonic;
     uint32_t opcode_bin;
 } OpcodeMapping;
+
+OpcodeMapping *opcodeMapping;
+size_t opcode_map_size;
 
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
@@ -71,6 +77,8 @@ void parseLoadStore(InstructionIR instruction, FILE *file) {
 void parseDataProcessing(InstructionIR instruction, FILE *file) {
 
 }
+
+static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], size_t size);
 
 static void parseTwoOperand(InstructionIR instruction, FILE *file);
 
@@ -135,15 +143,16 @@ int main(int argc, char **argv) {
     instruction1.operand[1] = "x6";
 
     InstructionParser parser1 = functionClassifier(instruction1, mappings, mappingCount);
-    parser1(instruction1);
+
 
     FILE *binaryCode = fopen("code.bin", "wb");
     if (binaryCode == NULL) {
         fprintf(binaryCode, "file unable to open");
         return EXIT_FAILURE;
     }
+    parser1(instruction1, binaryCode);
 
-    OpcodeMapping opcodeMapping[] = {
+    *opcodeMapping = {
             {"add", 0},
             {"adds", 1 << 29},
             {"sub", 1 << 30},
@@ -240,13 +249,40 @@ static InstructionParser functionClassifier(InstructionIR instruction, Instructi
 }
 
 
-
-
-static void parseTwoOperand(InstructionIR instruction, FILE *file) {
-
-    if (strcmp(instruction.operand[1], "#") == 0) {
-
+static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        if (strcmp(instructionIr.opcode, mapping[i].mnemonic) == 0) {return mapping[i].opcode_bin;}
     }
+    exit(1);
+}
+
+static void parseArtihmetic(InstructionIR instruction, FILE *file) {
+    uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
+    uint32_t opi = 1 << 24;
+    uint32_t sf = 1 << 31;
+    if (*instruction.operand[0] == 'W') {
+        sf = 0;
+    }
+    if (*instruction.operand[2] == '#') {
+        char *startptr = instruction.operand[2] + 1;
+        char *endptr;
+        uint32_t imm12 = strtoul(startptr, &endptr, 10) << 21;
+        uint32_t sl = 0;
+        if (strcmp(instruction.operand[3], "lsl #12") == 0) {
+            sl = 1 << 22;
+        }
+        uint32_t rn;
+        uint32_t rd;
+        uint32_t write_val = sf || opcode_bin || data_processing_immediate_code || opi || sl || imm12 || rn || rd;
+        size_t written = fwrite(&write_val, sizeof (uint32_t), 1, file);
+        if (written != 1) {
+            printf("error writing to file");
+            exit(1);
+        }
+    } else {
+        //TODO
+    }
+
 }
 
 
