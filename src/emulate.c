@@ -373,52 +373,40 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
 }
 
 void dataProcessingRegMultHandler(uint32_t instruction) {
-  const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
-  const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
+  const uint8_t rd = mask32_AtoB_shifted(instruction, 4,  0);
+  const uint8_t rn = mask32_AtoB_shifted(instruction, 9,  5);
   const uint8_t ra = mask32_AtoB_shifted(instruction, 14, 10);
+  const uint8_t x  = mask32_AtoB_shifted(instruction, 15, 15);
   const uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
-  const uint8_t x = mask32_AtoB_shifted(instruction, 15, 15);
   const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
 
-  uint64_t op1;
-  if (sf) {
-    if (ra == 0b1111) {
-      op1 = read64(&sRegisters.Zero);
-    }
-    op1 = read64(&gRegisters[ra]);
-  } else {
-    if (ra == 0b1111) {
-      op1 = read32(&sRegisters.Zero);
-    }
-    op1 = read32(&gRegisters[ra]);
+  if (rd == 0b11111) {
+    return;
   }
 
-  uint64_t op2;
+  // Initialise op_a, op_n, op_m to 0, also handles case of zero register
+  uint64_t op_a = 0; // ra
+  uint64_t op_n = 0; // rn
+  uint64_t op_m = 0;
   if (sf) {
-    op2 = read64(&gRegisters[rn]);
+    if (ra != 0b11111) op_a = read64(&gRegisters[ra]);
+    if (rn != 0b11111) op_n = read64(&gRegisters[rn]);
+    if (rm != 0b11111) op_m = read64(&gRegisters[rm]);
   } else {
-    op2 = read32(&gRegisters[rn]);
+    if (ra != 0b11111) op_a = read32(&gRegisters[ra]);
+    if (rn != 0b11111) op_n = read32(&gRegisters[rn]);
+    if (rm != 0b11111) op_m = read32(&gRegisters[rm]);
   }
 
-  uint64_t op3;
-  if (sf) {
-    op3 = read64(&gRegisters[rm]);
-  } else {
-    op3 = read32(&gRegisters[rm]);
-  }
+  uint64_t product = op_n * op_m;
 
-  uint64_t product = op2 * op3;
-  //Normalise if 32bit
-  if (sf) product = (uint32_t) product;
-
-  uint64_t result;
+  uint64_t result = 0;
   if (x) { //Sub
-    result = op1 + product;
+    result = op_a - product;
   } else { //Add
-    result = op1 - product;
+    result = op_a + product;
   }
 
-  //TODO: As far as I'm aware we dont have to code for 1111 since it "also" encodes ZR and that does nothing, but it still encodes R31
   //Set value based on sf
   if (sf) {
     write64(&gRegisters[rd], result);
