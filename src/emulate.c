@@ -448,7 +448,7 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
 
   imm16 = imm16 << (hw << 4); //Shifted by hw * 16
 
-  uint64_t mask; // Initialise mask
+  uint64_t mask = 0; // Initialise mask
   switch (opc) {
     //movn
     case (0b00):
@@ -471,7 +471,7 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
       mask = 0xFFFF << hw;
       //Mask used to keep values from last register
       if (sf) {
-        uint64_t write = (read64(&gRegisters[rd]) & ~mask) & imm16;
+        uint64_t write = (read64(&gRegisters[rd]) & ~mask) | imm16;
         write64(&gRegisters[rd], write);
       } else {
         uint32_t write = (read32(&gRegisters[rd]) & ~mask) & imm16;
@@ -479,6 +479,7 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
       }
       break;
     default:
+      fprintf(stderr, "Error: Unknown instruction (ImmWidMov)");
       break;
 
   }
@@ -750,7 +751,7 @@ void printEnd(FILE *ptr) {
 //Writes unless zero reg, since 32 bits, moves to the front of register by LSL
 void write32(Register* reg, uint32_t val) {
   if (reg == zeroReg) return;
-  *reg = val & 0x0000FFFF;
+  *reg = val & 0xFFFFFFFF;
 }
 
 //Writes unless zero reg
