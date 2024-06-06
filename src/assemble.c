@@ -26,16 +26,21 @@ typedef enum {instruction, directive, label} LineType;
 #define MAX_OPERANDS 4
 typedef struct {
     char *opcode;
-    char operand[MAX_OPERANDS];
+    char *operand[MAX_OPERANDS];
 } InstructionIR;
 
-typedef void (*InstructionParser)(InstructionIR);
+typedef void (*InstructionParser)(InstructionIR, FILE *);
 
 
 typedef struct {
     const char* mnemonic;
     InstructionParser parser;
 } InstructionMapping;
+
+typedef struct {
+    const char* mnemonic;
+    uint32_t opcode_bin;
+} OpcodeMapping;
 
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
@@ -50,32 +55,27 @@ char* DataProcessingInstruction(InstructionIR instruction);
 
 
 // Function declarations
-void parseBranch(InstructionIR instruction);
-void parseLoadStore(InstructionIR instruction);
-void parseDataProcessing(InstructionIR instruction);
-
-// Struct to map mnemonics to functions
-typedef struct {
-    const char* mnemonic;
-    InstructionParser parser;
-} InstructionMapping;
+void parseBranch(InstructionIR instruction, FILE *file);
+void parseLoadStore(InstructionIR instruction, FILE *file);
+void parseDataProcessing(InstructionIR instruction, FILE *file);
 
 // Parsing functions
-void parseBranch(InstructionIR instruction) {
+void parseBranch(InstructionIR instruction, FILE *file) {
     printf("Parsing Branch instruction: %s\n", instruction);
 }
 
-void parseLoadStore(InstructionIR instruction) {
+void parseLoadStore(InstructionIR instruction, FILE *file) {
     printf("Parsing Load/Store instruction: %s\n", instruction);
 }
 
-void parseDataProcessing(InstructionIR instruction) {
-    printf("Parsing Data Processing instruction: %s\n", instruction);
+void parseDataProcessing(InstructionIR instruction, FILE *file) {
+
 }
 
+static void parseTwoOperand(InstructionIR instruction, FILE *file);
+
 static void parser(char *line);
-char* DataProcessingInstruction(InstructionIR instruction);
-static void FunctionClassifier(InstructionIR instruction);
+static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
 
 
 int main(int argc, char **argv) {
@@ -129,30 +129,29 @@ int main(int argc, char **argv) {
     size_t mappingCount = sizeof(mappings) / sizeof(mappings[0]);
 
     // Example instruction mnemonics
-    const char* instructions[] = {
-            "BRANCH X1, X2, X3",
-            "LOAD R1, [R2]",
-            "STORE R1, [R2]",
-            "ADD R1, R2, R3",
-            "SUB R4, R5, R6"
-    };
+    InstructionIR instruction1;
+    instruction1.opcode = "mvn";
+    instruction1.operand[0] = "x5";
+    instruction1.operand[1] = "x6";
 
-    // Iterate over example instructions and parse them
-    for (size_t i = 0; i < sizeof(instructions) / sizeof(instructions[0]); ++i) {
-        // Extract the mnemonic (first word of the instruction)
-        char mnemonic[16];
-        sscanf(instructions[i], "%15s", mnemonic);
+    InstructionParser parser1 = functionClassifier(instruction1, mappings, mappingCount);
+    parser1(instruction1);
 
-        // Get the parser function
-        InstructionParser parser = getParser(mnemonic, mappings, mappingCount);
-        if (parser) {
-            parser(instructions[i]);
-        } else {
-            printf("Unknown instruction: %s\n", instructions[i]);
-        }
+    FILE *binaryCode = fopen("code.bin", "wb");
+    if (binaryCode == NULL) {
+        fprintf(binaryCode, "file unable to open");
+        return EXIT_FAILURE;
     }
 
-  return EXIT_SUCCESS;
+    OpcodeMapping opcodeMapping[] = {
+            {"add", 0},
+            {"adds", 1 << 29},
+            {"sub", 1 << 30},
+            {"subs", 3 << 30}
+    };
+
+
+   return EXIT_SUCCESS;
 };
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol) {
@@ -233,12 +232,21 @@ static void parser(char *line) {
 
 
 
-static InstructionParser FunctionClassifier(InstructionIR instruction, InstructionMapping* mappings, size_t mapSize) {
+static InstructionParser functionClassifier(InstructionIR instruction, InstructionMapping* mappings, size_t mapSize) {
     for (size_t i = 0; i < mapSize; i++) {
-        if (strcmp(instruction.opcode, mappings[0].mnemonic) == 0) {return  mappings[0].parser;}
+        if (strcmp(instruction.opcode, mappings[i].mnemonic) == 0) { return  mappings[i].parser; }
     }
     return NULL;
 }
 
+
+
+
+static void parseTwoOperand(InstructionIR instruction, FILE *file) {
+
+    if (strcmp(instruction.operand[1], "#") == 0) {
+
+    }
+}
 
 
