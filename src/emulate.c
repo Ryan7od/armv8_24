@@ -563,14 +563,14 @@ void loadStoreLoadLiteralHandler(uint32_t instruction) {
 
   uint64_t address = read64(&sRegisters.PC) + offset;
 
-  if (sf) { //64-bit
+  if (sf) { //64 bit
     uint64_t result = 0;
     for (int i = 0; i < 8; i++) {
       uint16_t mem_i = memory[address + i];
       result += (mem_i << (8 * i));
     }
     write32(&gRegisters[rt], result);
-  } else {
+  } else { //32 bit
     uint32_t result = 0;
     for (int i = 0; i < 4; i++) {
       result += memory[address + i] << (8 * i);
