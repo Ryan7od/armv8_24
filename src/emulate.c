@@ -175,6 +175,7 @@ void dataProcessingRegHandler(uint32_t instruction) {
         dataProcessingRegLogicHandler(instruction);
         break;
       default:
+        fprintf(stderr, "Unknown opr with M=0 in dpRegisterHandle (%x)", opr);
         break;
     }
   }
@@ -322,7 +323,7 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
       setFlagsLogical(result, op1, op2, sf);
       break;
     default:
-      result = 0;
+      fprintf("Unknown opc in dpRegisterLogicHandler (%x)", opc);
       break;
   }
 
@@ -436,7 +437,7 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
       }
       break;
     default:
-      fprintf(stderr, "Error: Unknown instruction (ImmWidMov)");
+      fprintf(stderr, "Error: Unknown opc in ImmWidMov (%x)", opc);
       break;
 
   }
