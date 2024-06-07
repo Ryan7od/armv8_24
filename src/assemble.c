@@ -321,8 +321,28 @@ static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping
 
 }
 
-static void parseMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
-    //TODO
+static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
+    uint32_t opi = 5 << 23;
+    uint32_t rd = getReg(instruction.operand[0]);
+    uint32_t sf = 1 << 31;
+    if (*instruction.operand[0] == 'w' || *instruction.operand[0] == 'W') {
+        sf = 0;
+    }
+    char *startptr = instruction.operand[0] + (1* sizeof (char));
+    uint32_t imm16 = (strtoul(startptr, NULL, 16)) << 5;
+    uint32_t hw = 0;
+    if (instruction.operand[2] != NULL) {
+        char *numptr = instruction.operand[2] + (5 * sizeof (char ));
+        hw = (strtoul(numptr, NULL, 10)) << 21;
+    }
+    uint32_t write_val = sf | opcode_bin | data_processing_immediate_code | opi | hw | imm16 | rd;
+    size_t written = fwrite(&write_val, sizeof(uint32_t), 1, file);
+    if (written != 1) {
+        fprintf(file, "error writing to file");
+        exit(1);
+    }
+
 }
 
 static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
