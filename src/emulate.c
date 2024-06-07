@@ -49,6 +49,10 @@ extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);
 extern void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64);
 extern uint64_t sExtend64(uint64_t value, int msb);
 extern uint32_t sExtend32(uint32_t value, int msb);
+extern void logicalShiftLeft(uint64_t *value, uint8_t shift);
+extern void logicalShiftRight(uint64_t *value, uint8_t shift);
+extern void arithmeticShiftRight(uint64_t *value, uint8_t shift, bool sf);
+extern void rotateRight(uint64_t *value, uint8_t shift, bool sf);
 
 //Global variables
 //2MB of memory
@@ -181,53 +185,39 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
   const uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
   const uint8_t rm = mask32_AtoB_shifted(instruction, 20, 16);
   const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
-  const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+  const bool sf = mask32_AtoB_shifted(instruction, 31, 31);
 
   uint64_t op1;
-  if (sf) {
-    op1 = read64(&gRegisters[rn]);
-  } else {
-    op1 = read32(&gRegisters[rn]);
-  }
-
   uint64_t op2;
   if (sf) {
+    op1 = read64(&gRegisters[rn]);
     op2 = read64(&gRegisters[rm]);
   } else {
+    op1 = read32(&gRegisters[rn]);
     op2 = read32(&gRegisters[rm]);
   }
 
-  uint64_t newBit = 0; // Initialise newBit
   //Shift op2
   switch (shift) {
     //lsl
     case (0b00):
-      op2 = op2 << operand;
+      logicalShiftLeft(&op2, operand);
       break;
     //lsr
     case (0b01):
-      op2 = op2 >> operand;
+      logicalShiftRight(&op2, operand);
       break;
     //asr
     case (0b10):
-
-      newBit = (operand & 0b1000) >> 3;
-      if (newBit) {
-        //Put it to the right position based on sf
-        if (sf) newBit = newBit << 31; else newBit = newBit << 63;
-        for (int i = 0; i < operand; i++) {
-          op2 = (op2 >> 1) | newBit;
-        }
-      } else { //Bit is 0 so will be the same effect as lsr
-        op2 = op2 >> operand;
-      }
+      arithmeticShiftRight(&op2, operand, sf);
       break;
     default:
+      fprintf(stderr, "Error: Shift is unknown (%x)", shift);
       break;
   }
 
-  //Make sure value is still 32 bits if sf
-  if (sf) {
+  //Make sure value is still 32 bits
+  if (!sf) {
     op2 = (uint32_t) op2;
   }
 
@@ -260,7 +250,7 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
   const uint8_t n = mask32_AtoB_shifted(instruction, 21, 21);
   const uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
   const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
-  const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
+  const bool sf = mask32_AtoB_shifted(instruction, 31, 31);
 
 
   uint64_t op1;
@@ -282,44 +272,27 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
   switch (shift) {
     //lsl
     case (0b00):
-      op2 = op2 << operand;
+      logicalShiftLeft(&op2, operand);
       break;
     //lsr
     case (0b01):
-      op2 = op2 >> operand;
+      logicalShiftRight(&op2, operand);
       break;
     //asr
     case (0b10):
-      if (sf) { // 64
-        op2signBit = (op2 >> 63) << 63;
-      } else { // 32
-        op2signBit = (op2 >> 31) << 31;
-      }
-      if (op2signBit) {
-        //Put it to the right position based on sf
-        for (int i = 0; i < operand; i++) {
-          op2 = (op2 >> 1) | op2signBit;
-        }
-      } else { //Bit is 0 so will be the same effect as lsr
-        op2 = op2 >> operand;
-      }
+      arithmeticShiftRight(&op2, operand, sf);
       break;
-    //ror
-    case (0b11):
-      //Rotation based on bits
-      if (sf) Rshift = 63; else Rshift = 31;
-      for (int i = 0; i < operand; i++) {
-        //Shifts op2 to right and wraps round last bit
-        op2 = (op2 >> 1) | ((op2 & 0b1) << Rshift);
-      }
+    case (0b11): //ror
+      rotateRight(&op2, operand, sf);
       break;
     default:
+      fprintf(stderr, "Error: shift unknown in dpRegLogicHandler (%x)", shift);
       break;
   }
 
   //Make sure 32 bits if !sf
   if (!sf) {
-    op2 = (uint32_t) op2;
+    op2 = (uint32_t)op2;
   }
 
   //Negate op2 based on N flah
@@ -858,4 +831,43 @@ uint32_t sExtend32(uint32_t value, int msb) {
     return value | bits;
   }
   return value;
+}
+
+void logicalShiftLeft(uint64_t *value, uint8_t shift) {
+  *value = ((uint64_t)*value << shift);
+}
+
+void logicalShiftRight(uint64_t *value, uint8_t shift) {
+  *value = *value >> shift;
+}
+
+void arithmeticShiftRight(uint64_t *value, uint8_t shift, bool sf) {
+  uint64_t signBit;
+  if (sf) { // 64
+    signBit = (*value >> 63) << 63;
+  } else { // 32
+    signBit = (*value >> 31) << 31;
+  }
+  if (signBit) {
+    //Put it to the right position based on sf
+    for (int i = 0; i < shift; i++) {
+      *value = (*value >> 1) | signBit;
+    }
+  } else { //Bit is 0 so will be the same effect as lsr
+    *value = *value >> shift;
+  }
+}
+
+void rotateRight(uint64_t *value, uint8_t shift, bool sf) {
+  uint16_t Rshift;
+  if (sf) {
+    Rshift = 63;
+  } else {
+    Rshift = 31;
+  }
+
+  for (int i = 0; i < shift; i++) {
+    //Shifts op2 to right and wraps round last bit
+    *value = (*value >> 1) | ((*value & 0b1) << Rshift);
+  }
 }
