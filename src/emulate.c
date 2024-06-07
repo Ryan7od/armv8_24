@@ -47,7 +47,7 @@ extern void branchHandler(uint32_t instruction);
 extern uint32_t twos(uint32_t num);
 extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);
 extern uint64_t mask64_AtoB_shifted(uint64_t instruction, uint8_t a, uint8_t b);
-extern void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64);
+extern void setFlagsArithmetic(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64);
 extern uint64_t sExtend64(uint64_t value, int msb);
 extern uint32_t sExtend32(uint32_t value, int msb);
 extern void logicalShiftLeft(uint64_t *value, uint8_t shift);
@@ -231,7 +231,7 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
   }
 
   if (opc & 0b01) { //Set flags
-    setFlags(result, op1, op2, !(opc & 0b10), sf);
+    setFlagsArithmetic(result, op1, op2, !(opc & 0b10), sf);
   }
 
 
@@ -319,18 +319,7 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
     // ands/bics
     case (0b11):
       result = op1 & op2;
-      //Set flags
-      //C and V 0
-      sRegisters.pstate.C = false;
-      sRegisters.pstate.V = false;
-      //Z if result is zero
-      sRegisters.pstate.Z = !result;
-      //N as sign of result (depends on 32 or 64 bit)
-      if (sf) {
-        sRegisters.pstate.N = result & 0x80000000;
-      } else {
-        sRegisters.pstate.N = result & 0x8000000000000000;
-      }
+      setFlagsLogical(result, op1, op2, sf);
       break;
     default:
       result = 0;
@@ -483,7 +472,7 @@ void dataProcessingImmArithHandler(uint32_t instruction) {
   }
 
   if (opc & 0b01) { //Set flags
-    setFlags(result, operand, imm12, !(opc & 0b10), sf);
+    setFlagsArithmetic(result, operand, imm12, !(opc & 0b10), sf);
   }
 
 
@@ -777,7 +766,29 @@ uint64_t mask64_AtoB_shifted(uint64_t instruction, uint8_t a, uint8_t b) {
   return (instruction & mask) >> b;
 }
 
-void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64) {
+void setFlagsLogical(uint64_t result, uint64_t a, uint64_t b, bool b64) {
+  // Find sign bits of a, b, result
+  bool rSign;
+  if (b64) {
+    rSign = signBit(result, 63);
+  } else {
+    rSign = signBit(result, 31);
+  }
+  
+  //N is set to the sign bit of the result
+  sRegisters.pstate.N = rSign;
+
+  //Z is set only when the result is all zero
+  sRegisters.pstate.Z = !result;
+
+  // C & V set to 0
+  sRegisters.pstate.C = 0;
+  sRegisters.pstate.V = 0;
+}
+
+void setFlagsArithmetic(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64) {
+  setFlagsLogical(result, a, b, bit64);
+  
   // Find sign bits of a, b, result
   bool aSign;
   bool bSign;
@@ -791,12 +802,6 @@ void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64
     bSign = signBit(b, 31);
     rSign = signBit(result, 31);
   }
-  
-  //N is set to the sign bit of the result
-  sRegisters.pstate.N = rSign;
-
-  //Z is set only when the result is all zero
-  sRegisters.pstate.Z = !result;
 
   //V is set when there is signed overflow/underflow (! is pos, else neg)
   if (addition) {
@@ -813,9 +818,10 @@ void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64
     }
   }
 
+  
   //C in addition is set when an unsigned carry produced
   if (addition) {
-    sRegisters.pstate.C = result < a || result < b;
+    sRegisters.pstate.C = result < a || result < b || (result > UINT32_MAX && !bit64);
   }
   //C in subtraction is set if there is no borrow
   else {
@@ -883,5 +889,5 @@ void rotateRight(uint64_t *value, uint8_t shift, bool sf) {
 }
 
 bool signBit(uint64_t value, uint8_t msb) {
-  return value >> msb;
+  return (value << (63 - msb)) >> 63;
 }
