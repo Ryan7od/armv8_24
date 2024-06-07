@@ -83,12 +83,12 @@ void parseDataProcessing(InstructionIR instruction, FILE *file) {
 static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], size_t size);
 
 static void parseTwoOperand(InstructionIR instruction, FILE *file);
-
+static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void parser(char *line);
 static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
 static uint32_t getReg(char *reg);
 static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-
+static void parseMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
 int main(int argc, char **argv) {
     struct list SymbolTable;
@@ -319,6 +319,14 @@ static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping
         printf("%u", write_val);
     }
 
+}
+
+static void parseMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    //TODO
+}
+
+static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    //TODO
 }
 
 static uint32_t getReg(char *reg) {
