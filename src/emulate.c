@@ -573,13 +573,15 @@ void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address)
     if (sf) {
       uint64_t data = 0;
       for (int i = 0; i < 8; i++) {
-        data += memory[address + i] << (4 * i);
+        uint64_t i_byte = ((uint64_t)memory[address + i] << (8 * i));
+        data += i_byte;
       }
       write64(&gRegisters[rt], data);
     } else {
       uint32_t data = 0;
       for (int i = 0; i < 4; i++) {
-        data += memory[address + i] << (4 * i);
+        uint32_t i_byte = ((uint32_t)memory[address + i] << (8 * i));
+        data += i_byte;
       }
       write32(&gRegisters[rt], data);
     }
