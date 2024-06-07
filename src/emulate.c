@@ -46,6 +46,7 @@ extern void loadStorePIndexHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
 extern uint32_t twos(uint32_t num);
 extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);
+extern uint64_t mask64_AtoB_shifted(uint64_t instruction, uint8_t a, uint8_t b);
 extern void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64);
 extern uint64_t sExtend64(uint64_t value, int msb);
 extern uint32_t sExtend32(uint32_t value, int msb);
@@ -53,6 +54,7 @@ extern void logicalShiftLeft(uint64_t *value, uint8_t shift);
 extern void logicalShiftRight(uint64_t *value, uint8_t shift);
 extern void arithmeticShiftRight(uint64_t *value, uint8_t shift, bool sf);
 extern void rotateRight(uint64_t *value, uint8_t shift, bool sf);
+extern bool signBit(uint64_t value, uint8_t msb);
 
 //Global variables
 //2MB of memory
@@ -759,7 +761,6 @@ uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   // Check for invalid bit positions
   if (a < b || a > 31 || b > 31) {
     fprintf(stderr, "Error: Invalid a: %u or b: %u\n", a, b);
-    return 0;
   }
   // Create mask from a and b via 1 shifted by difference of a and b + 1 minus 1 then shifted by a
   uint32_t mask = ((1U << (a - b + 1)) - 1) << b;
@@ -767,45 +768,54 @@ uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   return (instruction & mask) >> b;
 }
 
-void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64) {
-  //N is set to the sign bit of the result
-  if (bit64) {
-    sRegisters.pstate.N = result & 0x8000000000000000;
-  } else {
-    sRegisters.pstate.N = result & 0x80000000;
+uint64_t mask64_AtoB_shifted(uint64_t instruction, uint8_t a, uint8_t b) {
+    if (a < b || a > 63 || b > 63) {
+    fprintf(stderr, "Error: Invalid a: %u or b: %u\n", a, b);
   }
+
+  uint64_t mask = ((1U << (a - b + 1)) - 1) << b;
+  return (instruction & mask) >> b;
+}
+
+void setFlags(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64) {
+  // Find sign bits of a, b, result
+  bool aSign;
+  bool bSign;
+  bool rSign;
+  if (bit64) {
+    aSign = signBit(a, 63);
+    bSign = signBit(b, 63);
+    rSign = signBit(result, 63);
+  } else {
+    aSign = signBit(a, 31);
+    bSign = signBit(b, 31);
+    rSign = signBit(result, 31);
+  }
+  
+  //N is set to the sign bit of the result
+  sRegisters.pstate.N = rSign;
 
   //Z is set only when the result is all zero
   sRegisters.pstate.Z = !result;
 
-  //V is set when there is signed overflow/underflow
-  int64_t aSigned = a;
-  int64_t bSigned = b;
-  int64_t max;
-  int64_t min;
-  if (bit64) {
-    max = INT64_MAX;
-    min = INT64_MIN;
-  } else {
-    max = INT32_MAX;
-    min = INT32_MIN;
-  }
-  if (bSigned >= 0) { //Check if a + b > max
-    sRegisters.pstate.V = aSigned > max - bSigned;
-  } else { //Check if a + b < min
-    sRegisters.pstate.V = aSigned < min - bSigned;
+  //V is set when there is signed overflow/underflow (! is pos, else neg)
+  if (addition) {
+    if ((!aSign && !bSign && rSign) || (aSign && bSign && !rSign)) { 
+      sRegisters.pstate.V = 1; 
+    } else {
+      sRegisters.pstate.V = 0; 
+    }
+  } else { // Subtraction
+    if ((!aSign && bSign && rSign) || (aSign && !bSign && !rSign)) { 
+      sRegisters.pstate.V = 1; 
+    } else {
+      sRegisters.pstate.V = 0; 
+    }
   }
 
-  uint64_t umax;
-  uint64_t umin;
-  if (bit64) {
-    umax = UINT64_MAX;
-  } else {
-    umax = UINT32_MAX;
-  }
   //C in addition is set when an unsigned carry produced
   if (addition) {
-    sRegisters.pstate.C = a > umax - b;
+    sRegisters.pstate.C = result < a || result < b;
   }
   //C in subtraction is set if there is no borrow
   else {
@@ -870,4 +880,8 @@ void rotateRight(uint64_t *value, uint8_t shift, bool sf) {
     //Shifts op2 to right and wraps round last bit
     *value = (*value >> 1) | ((*value & 0b1) << Rshift);
   }
+}
+
+bool signBit(uint64_t value, uint8_t msb) {
+  return value >> msb;
 }
