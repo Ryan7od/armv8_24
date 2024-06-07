@@ -36,7 +36,7 @@ typedef struct {
 } OpcodeMapping;
 
 typedef void (*InstructionParser)(InstructionIR, FILE *);
-
+static uint32_t getN(const char *opcode);
 uint32_t data_processing_immediate_code = 1 << 28;
 uint32_t data_processing_register_code = 5 << 25;
 
@@ -52,7 +52,8 @@ typedef struct {
 
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
-
+static void writeToFile(uint32_t write_val, FILE *file);
+static void parseLogic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
 
 
@@ -66,6 +67,7 @@ char* DataProcessingInstruction(InstructionIR instruction);
 void parseBranch(InstructionIR instruction, FILE *file);
 void parseLoadStore(InstructionIR instruction, FILE *file);
 void parseDataProcessing(InstructionIR instruction, FILE *file);
+static uint32_t getSf(char *reg);
 
 // Parsing functions
 void parseBranch(InstructionIR instruction, FILE *file) {
@@ -265,13 +267,10 @@ static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], 
     exit(1);
 }
 
-static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+static void parseArithmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
     uint32_t opi = 1 << 24;
-    uint32_t sf = 1 << 31;
-    if (*instruction.operand[0] == 'w' || *instruction.operand[0] == 'W') {
-        sf = 0;
-    }
+    uint32_t sf = getSf(instruction.operand[0]);
     if (*instruction.operand[2] == '#') {
         char *startptr = instruction.operand[2] + 1;
         printf("%s\n", startptr);
@@ -284,11 +283,7 @@ static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping
         uint32_t rn = getReg(instruction.operand[1]) << 5;
         uint32_t rd = getReg(instruction.operand[0]);
         uint32_t write_val = sf | opcode_bin | data_processing_immediate_code | opi | sl | imm12 | rn | rd;
-        size_t written = fwrite(&write_val, sizeof (uint32_t), 1, file);
-        if (written != 1) {
-            printf("error writing to file");
-            exit(1);
-        }
+        writeToFile(write_val, file);
         printf("%u", write_val);
     } else {
         uint32_t M = 0;
@@ -311,11 +306,7 @@ static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping
             free(number);
         }
         uint32_t write_val = sf | opcode_bin | M | data_processing_register_code | opr | rm | operand | rn | rd;
-        size_t written = fwrite(&write_val, sizeof (uint32_t), 1, file);
-        if (written != 1) {
-            printf("error writing to file");
-            exit(1);
-        }
+        writeToFile(write_val, file);
         printf("%u", write_val);
     }
 
@@ -325,10 +316,7 @@ static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping o
     uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
     uint32_t opi = 5 << 23;
     uint32_t rd = getReg(instruction.operand[0]);
-    uint32_t sf = 1 << 31;
-    if (*instruction.operand[0] == 'w' || *instruction.operand[0] == 'W') {
-        sf = 0;
-    }
+    uint32_t sf = getSf(instruction.operand[0]);
     char *startptr = instruction.operand[0] + (1* sizeof (char));
     uint32_t imm16 = (strtoul(startptr, NULL, 16)) << 5;
     uint32_t hw = 0;
@@ -337,21 +325,83 @@ static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping o
         hw = (strtoul(numptr, NULL, 10)) << 21;
     }
     uint32_t write_val = sf | opcode_bin | data_processing_immediate_code | opi | hw | imm16 | rd;
-    size_t written = fwrite(&write_val, sizeof(uint32_t), 1, file);
-    if (written != 1) {
-        fprintf(file, "error writing to file");
-        exit(1);
+    writeToFile(write_val, file);
     }
 
 }
 
 static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
-    //TODO
+    uint32_t m = 1 << 28;
+    uint32_t opr = 1 << 24;
+    uint32_t opcode_binary = getOpcode(instruction, opcodeMapping, opcode_map_size);
+    uint32_t rm = getReg(instruction.operand[2]) << 16;
+    uint32_t ra = getReg(instruction.operand[3]) << 10;
+    uint32_t rn = getReg(instruction.operand[1]) << 5;
+    uint32_t rd = getReg(instruction.operand[0]);
+    uint32_t sf = getSf(instruction.operand[0]);
+    uint32_t x = 0;
+    if (strcmp(instruction.opcode, "msub") == 0) {
+        x = 1 << 15;
+    }
+    uint32_t write_val = sf | opcode_binary | m | data_processing_register_code | opr | rm | x | ra | rn | rd;
+    writeToFile(write_val, file);
 }
 
 static uint32_t getReg(char *reg) {
+    if (reg == NULL) {
+        return 0;
+    }
     uint32_t rv = strtoul((reg + (1*sizeof (char))), NULL, 10);
     return rv;
 }
 
+static uint32_t getSf(char *reg) {
+    if (*reg == 'w' || *reg == 'W') {
+        return 0;
+    } else {
+        return 1 << 31;
+    }
+}
 
+static void writeToFile(uint32_t write_val, FILE *file) {
+    size_t written = fwrite(&write_val, sizeof(uint32_t), 1, file);
+    if (written != 1) {
+        fprintf(file, "error writing to file");
+        exit(1);
+    }
+}
+
+static void parseLogic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
+    uint32_t sf = getSf(instruction.operand[0]);
+    uint32_t M = 0;
+    uint32_t opr = 1 << 24;
+    uint32_t rm = getReg(instruction.operand[2]) << 16;
+    uint32_t rn = getReg(instruction.operand[1]) << 5;
+    uint32_t rd = getReg(instruction.operand[0]);
+    uint32_t operand = 0;
+    if (instruction.operand[3] != NULL) {
+        char *shift = malloc(3 * sizeof(char));
+        strncpy(shift, instruction.operand[3], 3);
+        if (strcmp(shift, "lsr") == 0) {
+            opr = 1 << 22;
+        } else if (strcmp(shift, "asr") == 0) {
+            opr = 1 << 23;
+        }
+        free(shift);
+        char *number = instruction.operand[3] + 5;
+        operand = (strtoul(number, NULL, 10)) << 10;
+        free(number);
+    }
+    uint32_t N = getN(instruction.opcode);
+    uint32_t write_val = sf | opcode_bin | M | data_processing_register_code | N | opr | rm | operand | rn | rd;
+    writeToFile(write_val, file);
+    printf("%u", write_val);
+}
+
+static uint32_t getN(const char *opcode) {
+    if (strcmp(opcode, "bic") == 0 || strcmp(opcode, "orn") == 0 || strcmp(opcode, "eon") == 0 || strcmp(opcode, "bics") == 0) {
+        return 1;
+    }
+    return 0;
+}
