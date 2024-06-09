@@ -1,4 +1,4 @@
-#include "utilty.h"
+#include "utility.h"
 
 extern unsigned char memory[MB2];
 extern Register gRegisters[31] = { 0 };

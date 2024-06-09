@@ -2,13 +2,16 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+
+#ifndef emulate
+#define emulate
+
+
+#include "memReg.h"
 #include "utility.h"
+#include "loadstore.h"
 
-#define strlen(arr) = sizeof(arr)/sizeof(arr[0])
-#define MB2 2097152 // 2MB of memory (2*2^20)
-
-//ADTs
-
+#endif
 
 //Prototype functions
 extern void printEnd(FILE *ptr);
@@ -19,20 +22,7 @@ extern void dataProcessingRegHandler(uint32_t instruction);
 extern void dataProcessingRegArithHandler(uint32_t instruction);
 extern void dataProcessingRegLogicHandler(uint32_t instruction);
 extern void dataProcessingRegMultHandler(uint32_t instruction);
-extern void loadStoreHandler(uint32_t instruction);
-extern void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address);
-extern void loadStoreLoadLiteralHandler(uint32_t instruction);
-extern void loadStoreUnsignedOffsetHandler(uint32_t instruction);
-extern void loadStoreRegOffHandler(uint32_t instruction);
-extern void loadStorePIndexHandler(uint32_t instruction);
 extern void branchHandler(uint32_t instruction);
-
-
-//Global variables
-//2MB of memory
-unsigned char memory[MB2] = { 0 };
-Register gRegisters[31] = { 0 };
-SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
 
 int main(int argc, char **argv) {
   //Ensure 1 or 2 arguments
@@ -455,142 +445,6 @@ void dataProcessingImmArithHandler(uint32_t instruction) {
   }
 }
 
-void loadStoreHandler(uint32_t instruction) {
-  const uint8_t diff = mask32_AtoB_shifted(instruction, 31, 31);
-
-  if (!diff) { //Load literal
-    loadStoreLoadLiteralHandler(instruction);
-  } else {
-    const uint8_t u = mask32_AtoB_shifted(instruction, 24, 24);
-    if (u) { //Unsigned offset
-      loadStoreUnsignedOffsetHandler(instruction);
-    } else {
-      const uint8_t diff2 = mask32_AtoB_shifted(instruction, 21, 21);
-      if (diff2) { //Register offset
-        loadStoreRegOffHandler(instruction);
-      } else { // Pre/Post-index
-        loadStorePIndexHandler(instruction);
-      }
-    }
-  }
-}
-
-void loadStoreLoadLiteralHandler(uint32_t instruction) {
-  const uint32_t simm19 = mask32_AtoB_shifted(instruction, 23, 5);
-  const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
-  const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
-
-  uint64_t offset = simm19 << 2;
-  offset = sExtend64(offset, 20);
-
-  uint64_t address = read64(&sRegisters.PC) + offset;
-
-  if (sf) { //64 bit
-    uint64_t result = 0;
-    for (int i = 0; i < 8; i++) {
-      uint64_t mem_i = memory[address + i];
-      uint64_t mem_i_shifted = mem_i << (8 * i);
-      result = result + mem_i_shifted;
-    }
-    write64(&gRegisters[rt], result);
-  } else { //32 bit
-    uint32_t result = 0;
-    for (int i = 0; i < 4; i++) {
-      result += memory[address + i] << (8 * i);
-    }
-    write32(&gRegisters[rt], result);
-  }
-}
-
-void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address) {
-  if (l) { //Load
-    if (sf) {
-      uint64_t data = 0;
-      for (int i = 0; i < 8; i++) {
-        uint64_t i_byte = ((uint64_t)memory[address + i] << (8 * i));
-        data += i_byte;
-      }
-      write64(&gRegisters[rt], data);
-    } else {
-      uint32_t data = 0;
-      for (int i = 0; i < 4; i++) {
-        uint32_t i_byte = ((uint32_t)memory[address + i] << (8 * i));
-        data += i_byte;
-      }
-      write32(&gRegisters[rt], data);
-    }
-  } else { //Store
-    if (sf) {
-      uint64_t data = read64(&gRegisters[rt]);
-      for (int i = 0; i < 8; i++) {
-        memory[address + i] = data & 0xFF;
-        data = data >> 8;
-      }
-    } else {
-      uint32_t data = read32(&gRegisters[rt]);
-      for (int i = 0; i < 4; i++) {
-        memory[address + i] = data & 0xFF;
-        data = data >> 8;
-      }
-    }
-  }
-}
-
-void loadStoreUnsignedOffsetHandler(uint32_t instruction) {
-  const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
-  const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
-  const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
-  const uint16_t imm12 = mask32_AtoB_shifted(instruction, 21, 10);
-  const uint8_t l = mask32_AtoB_shifted(instruction, 22, 22);
-
-  uint64_t uoffset;
-  int msb;
-  if (sf) {
-    uoffset = imm12 << 3;
-    msb = 14;
-  } else {
-    uoffset = imm12 << 2;
-    msb = 13;
-  }
-
-  uint64_t address = sExtend64(uoffset, msb) + read64(&gRegisters[xn]);
-
-  loadStoreHelperHandler(l, sf, rt, address);
-}
-
-void loadStoreRegOffHandler(uint32_t instruction) {
-  const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
-  const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
-  const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
-  const uint16_t xm = mask32_AtoB_shifted(instruction, 20, 16);
-  const uint8_t l = mask32_AtoB_shifted(instruction, 22, 22);
-
-  uint64_t address = read64(&gRegisters[xm]) + read64(&gRegisters[xn]);
-
-  loadStoreHelperHandler(l, sf, rt, address);
-}
-
-void loadStorePIndexHandler(uint32_t instruction) {
-  const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
-  const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
-  const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
-  const uint16_t simm9 = mask32_AtoB_shifted(instruction, 20, 12);
-  const uint8_t l = mask32_AtoB_shifted(instruction, 22, 22);
-  const uint8_t i = mask32_AtoB_shifted(instruction, 11, 11);
-
-  if (i) { //Pre-indexed
-    uint64_t address = read64(&gRegisters[xn]) + sExtend64(simm9, 8);
-    write64(&gRegisters[xn], address);
-    loadStoreHelperHandler(l, sf, rt, address);
-  } else { //Post-indexed
-    uint64_t address = read64(&gRegisters[xn]);
-    loadStoreHelperHandler(l, sf, rt, address);
-    address +=  + sExtend64(simm9, 8);
-    write64(&gRegisters[xn], address);
-  }
-}
-
-
 //Branches are either register, immediate or immediate conditional, based on the first 3 bits
 void branchHandler(uint32_t instruction) {
   const uint32_t diff = mask32_AtoB_shifted(instruction, 31, 29);
@@ -683,181 +537,4 @@ void printEnd(FILE *ptr) {
       fprintf(ptr, "0x%08lx: %08lx\n", i, word);
     }
   }
-}
-
-//Writes unless zero reg, since 32 bits, moves to the front of register by LSL
-void write32(Register* reg, uint32_t val) {
-  if (reg == zeroReg) return;
-  *reg = val & 0xFFFFFFFF;
-}
-
-//Writes unless zero reg
-void write64(Register* reg, uint64_t val) {
-  if (reg == zeroReg) return;
-  *reg = val;
-}
-
-//Reads, since only first 32 bits LSR
-uint32_t read32(Register* reg) {
-  return *reg & 0xFFFFFFFF;
-}
-
-//Reads
-uint64_t read64(Register* reg) {
-  return *reg;
-}
-
-uint32_t fetch32(int index) {
-  return memory[index] + (memory[index+1] << 8) + (memory[index+2] << 16) + (memory[index+3] << 24);
-}
-
-uint32_t twos(uint32_t num) {
-  return (~num) + 1;
-}
-
-// Returns the instruction masked from bits a to b inclusive, ensure a >= b, returns 0 with error
-uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
-  // Check for invalid bit positions
-  if (a < b || a > 31 || b > 31) {
-    fprintf(stderr, "Error: Invalid a: %u or b: %u\n", a, b);
-  }
-  // Create mask from a and b via 1 shifted by difference of a and b + 1 minus 1 then shifted by a
-  uint32_t mask = ((1U << (a - b + 1)) - 1) << b;
-  // Return instruction masked
-  return (instruction & mask) >> b;
-}
-
-uint64_t mask64_AtoB_shifted(uint64_t instruction, uint8_t a, uint8_t b) {
-    if (a < b || a > 63 || b > 63) {
-    fprintf(stderr, "Error: Invalid a: %u or b: %u\n", a, b);
-  }
-
-  uint64_t mask = ((1U << (a - b + 1)) - 1) << b;
-  return (instruction & mask) >> b;
-}
-
-void setFlagsLogical(uint64_t result, uint64_t a, uint64_t b, bool b64) {
-  // Find sign bits of a, b, result
-  bool rSign;
-  if (b64) {
-    rSign = signBit(result, 63);
-  } else {
-    rSign = signBit(result, 31);
-  }
-  
-  //N is set to the sign bit of the result
-  sRegisters.pstate.N = rSign;
-
-  //Z is set only when the result is all zero
-  sRegisters.pstate.Z = !result;
-
-  // C & V set to 0
-  sRegisters.pstate.C = 0;
-  sRegisters.pstate.V = 0;
-}
-
-void setFlagsArithmetic(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64) {
-  setFlagsLogical(result, a, b, bit64);
-  
-  // Find sign bits of a, b, result
-  bool aSign;
-  bool bSign;
-  bool rSign;
-  if (bit64) {
-    aSign = signBit(a, 63);
-    bSign = signBit(b, 63);
-    rSign = signBit(result, 63);
-  } else {
-    aSign = signBit(a, 31);
-    bSign = signBit(b, 31);
-    rSign = signBit(result, 31);
-  }
-
-  //V is set when there is signed overflow/underflow (! is pos, else neg)
-  if (addition) {
-    if ((!aSign && !bSign && rSign) || (aSign && bSign && !rSign)) { 
-      sRegisters.pstate.V = 1; 
-    } else {
-      sRegisters.pstate.V = 0; 
-    }
-  } else { // Subtraction
-    if ((!aSign && bSign && rSign) || (aSign && !bSign && !rSign)) { 
-      sRegisters.pstate.V = 1; 
-    } else {
-      sRegisters.pstate.V = 0; 
-    }
-  }
-
-  
-  //C in addition is set when an unsigned carry produced
-  if (addition) {
-    sRegisters.pstate.C = result < a || result < b || (result > UINT32_MAX && !bit64);
-  }
-  //C in subtraction is set if there is no borrow
-  else {
-    sRegisters.pstate.C = a >= b;
-  }
-}
-
-uint64_t sExtend64(uint64_t value, int msb) {
-  if (value & (1 << msb)) { //If msb
-    uint64_t bits = 0;
-    bits = bits - 0b1;
-    bits = (bits >> (msb + 1)) << (msb + 1);
-    return value | bits;
-  }
-  return value;
-}
-
-uint32_t sExtend32(uint32_t value, int msb) {
-  if (value & (1 << msb)) { //If msb
-    uint64_t bits = 0;
-    bits = bits - 0b1;
-    bits = (bits >> (msb + 1)) << (msb + 1);
-    return value | bits;
-  }
-  return value;
-}
-
-void logicalShiftLeft(uint64_t *value, uint8_t shift) {
-  *value = ((uint64_t)*value << shift);
-}
-
-void logicalShiftRight(uint64_t *value, uint8_t shift) {
-  *value = *value >> shift;
-}
-
-void arithmeticShiftRight(uint64_t *value, uint8_t shift, bool sf) {
-  uint64_t signBit;
-  if (sf) { // 64
-    signBit = (*value >> 63) << 63;
-  } else { // 32
-    signBit = (*value >> 31) << 31;
-  }
-  if (signBit) {
-    //Put it to the right position based on sf
-    for (int i = 0; i < shift; i++) {
-      *value = (*value >> 1) | signBit;
-    }
-  } else { //Bit is 0 so will be the same effect as lsr
-    *value = *value >> shift;
-  }
-}
-
-void rotateRight(uint64_t *value, uint8_t shift, bool sf) {
-  uint16_t Rshift;
-  if (sf) {
-    Rshift = 63;
-  } else {
-    Rshift = 31;
-  }
-
-  for (int i = 0; i < shift; i++) {
-    //Shifts op2 to right and wraps round last bit
-    *value = (*value >> 1) | ((*value & 0b1) << Rshift);
-  }
-}
-
-bool signBit(uint64_t value, uint8_t msb) {
-  return (value << (63 - msb)) >> 63;
 }

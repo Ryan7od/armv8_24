@@ -1,5 +1,10 @@
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include "utility.h"
 
+//Writes unless zero reg, since 32 bits, moves to the front of register by LSL
 void write32(Register* reg, uint32_t val) {
   if (reg == zeroReg) return;
   *reg = val & 0xFFFFFFFF;

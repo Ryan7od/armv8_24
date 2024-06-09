@@ -2,6 +2,9 @@
 
 #define zeroReg &sRegisters.Zero
 
+#define strlen(arr) = sizeof(arr)/sizeof(arr[0])
+#define MB2 2097152 // 2MB of memory (2*2^20)
+
 typedef uint64_t Register;
 
 typedef struct {
