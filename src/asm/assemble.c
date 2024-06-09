@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
     }
 
   return EXIT_SUCCESS;
-};
+}
 
 void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol) {
     if (mySymbolTable->numItems == mySymbolTable->size) {

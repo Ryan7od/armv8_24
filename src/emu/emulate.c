@@ -240,9 +240,6 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
 
     // Ensure 64 or 32 after shift
 
-  int Rshift;
-  uint64_t op2signBit;
-
   //Shift op2
   switch (shift) {
     //lsl
@@ -295,7 +292,7 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
       setFlagsLogical(result, op1, op2, sf);
       break;
     default:
-      fprintf("Unknown opc in dpRegisterLogicHandler (%x)", opc);
+      fprintf(stderr, "Unknown opc in dpRegisterLogicHandler (%x)", opc);
       break;
   }
 

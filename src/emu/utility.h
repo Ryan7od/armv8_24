@@ -20,6 +20,7 @@ typedef struct  {
 extern uint32_t twos(uint32_t num);
 extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);
 extern uint64_t mask64_AtoB_shifted(uint64_t instruction, uint8_t a, uint8_t b);
+extern void setFlagsLogical(uint64_t result, uint64_t a, uint64_t b, bool b64);
 extern void setFlagsArithmetic(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64);
 extern uint64_t sExtend64(uint64_t value, int msb);
 extern uint32_t sExtend32(uint32_t value, int msb);
