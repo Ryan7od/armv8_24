@@ -47,6 +47,7 @@ typedef struct {
     InstructionParser parser;
 } InstructionMapping;
 
+struct SA_pair createSA(char *label, int lineNo);
 
 
 
@@ -95,6 +96,7 @@ static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping o
 bool firstPassFlag = true;
 dynarray SymbolTable;
 int main(int argc, char **argv) {
+
     SymbolTable = malloc(sizeof(struct dynarray));
     if (SymbolTable == NULL) {
         perror("memory allocation failed");
@@ -206,6 +208,18 @@ void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol) {
     mySymbolTable->numItems++;
 }
 
+struct SA_pair createSA(char *label, int lineNo) {
+    struct SA_pair newSA;
+    newSA.Symbol = label;
+    int address = 0x0 + ((lineNo + 1) * 4);
+    newSA.address = address;
+    return newSA;
+}
+
+void freeTable(dynarray symbolTable) {
+    free(symbolTable->data);
+    free(symbolTable);
+}
 
 
 void fileProcessor(const char *filename) {
@@ -218,7 +232,7 @@ void fileProcessor(const char *filename) {
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
-    int lineNo = 0;
+    int lineNo = -1;
 
     while ((read = getline(&line, &len, file)) != -1) {
         // Remove trailing newline character
@@ -229,7 +243,8 @@ void fileProcessor(const char *filename) {
             parser(line);
         } else {
             if (isalpha(*line) && line[read - 2] == ':') {
-                //TODO
+                struct SA_pair pair = createSA(line, lineNo);
+                addToTable(SymbolTable, pair);
             } else {
                 lineNo++;
             }
