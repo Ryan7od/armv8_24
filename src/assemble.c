@@ -90,8 +90,7 @@ static void parser(char *line);
 static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
 static uint32_t getReg(char *reg);
 static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static void parseMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-
+static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 int main(int argc, char **argv) {
     struct list SymbolTable;
     SymbolTable.numItems = 0;
@@ -108,7 +107,20 @@ int main(int argc, char **argv) {
             {"add", 0},
             {"adds", 1 << 29},
             {"sub", 1 << 30},
-            {"subs", 3 << 29}
+            {"subs", 3 << 29},
+            {"movn", 0 },
+            {"movz", 1<<30},
+            {"movk", 3<<29},
+            {"madd", 0},
+            {"msub", 0},
+            {"and", 0},
+            {"bic", 0},
+            {"orr", 1<<29},
+            {"orn", 1<<29},
+            {"eor", 1<<30},
+            {"eon", 1<<30},
+            {"ands", 3<<29},
+            {"bics", 3<<29}
     };
 
     size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
@@ -164,12 +176,11 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
     InstructionIR instruction2;
-    instruction2.opcode = "sub";
-    instruction2.operand[0] = "w15";
-    instruction2.operand[1] = "w0";
-    instruction2.operand[2] = "#0x5a0";
-    instruction2.operand[3] = "lsl #12";
-    parseArtihmetic(instruction2, binaryCode, opcodeMapping, opcode_msize);
+    instruction2.opcode = "and";
+    instruction2.operand[0] = "x7";
+    instruction2.operand[1] = "x18";
+    instruction2.operand[2] = "x12";
+    parseLogic(instruction2, binaryCode, opcodeMapping, opcode_msize);
     fclose(binaryCode);
    return EXIT_SUCCESS;
 };
@@ -317,18 +328,23 @@ static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping o
     uint32_t opi = 5 << 23;
     uint32_t rd = getReg(instruction.operand[0]);
     uint32_t sf = getSf(instruction.operand[0]);
-    char *startptr = instruction.operand[0] + (1* sizeof (char));
+    char *startptr = instruction.operand[1] + (1* sizeof (char));
     uint32_t imm16 = (strtoul(startptr, NULL, 16)) << 5;
+    printf("%u\n", imm16);
     uint32_t hw = 0;
     if (instruction.operand[2] != NULL) {
         char *numptr = instruction.operand[2] + (5 * sizeof (char ));
         hw = (strtoul(numptr, NULL, 10)) << 21;
     }
     uint32_t write_val = sf | opcode_bin | data_processing_immediate_code | opi | hw | imm16 | rd;
-    writeToFile(write_val, file);
+    size_t written = fwrite(&write_val, sizeof(uint32_t), 1, file);
+    if (written != 1) {
+        fprintf(file, "error writing to file");
+        exit(1);
     }
-
+    printf("%u", write_val);
 }
+
 
 static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     uint32_t m = 1 << 28;
@@ -375,9 +391,10 @@ static void parseLogic(InstructionIR instruction, FILE *file, OpcodeMapping opco
     uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
     uint32_t sf = getSf(instruction.operand[0]);
     uint32_t M = 0;
-    uint32_t opr = 1 << 24;
+    uint32_t opr = 0;
     uint32_t rm = getReg(instruction.operand[2]) << 16;
     uint32_t rn = getReg(instruction.operand[1]) << 5;
+    printf("%u", rn);
     uint32_t rd = getReg(instruction.operand[0]);
     uint32_t operand = 0;
     if (instruction.operand[3] != NULL) {
@@ -393,7 +410,7 @@ static void parseLogic(InstructionIR instruction, FILE *file, OpcodeMapping opco
         operand = (strtoul(number, NULL, 10)) << 10;
         free(number);
     }
-    uint32_t N = getN(instruction.opcode);
+    uint32_t N = getN(instruction.opcode) << 21;
     uint32_t write_val = sf | opcode_bin | M | data_processing_register_code | N | opr | rm | operand | rn | rd;
     writeToFile(write_val, file);
     printf("%u", write_val);
