@@ -1,21 +1,109 @@
-\documentclass[11pt]{article}
+\documentclass{article}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{titling}
 
-\usepackage{fullpage}
+\geometry{bottom=1in}
+% \pagecolor{pink}
+
+\setlength{\droptitle}{-3cm}
+\title{C Project Interim Report}
+\author{Aizere Shaikenova, Veer Vij, Max Stoddard, Ryan O'Donnell}
 
 \begin{document}
-
-\title{Our Extension...}
-\author{TODO}
-
+\small
 \maketitle
 
-\section{Introduction}
+% \section{Introduction}
+% \label{sec:introduction}
+% \begin{itemize}
+%     \item The first part of the C Project involves developing an AArch64 emulator that simulates the execution of an AArch64 binary file on a Raspberry Pi.
+%     \item The primary goal is to accurately emulate the behavior of AArch64 instructions and provide a functional environment for testing and debugging AArch64 binaries.
+% \end{itemize}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-culpa qui officia deserunt mollit anim id est laborum.
+
+\section{Group Work Distribution and Coordination}
+\label{sec:work_distribution}
+\subsection{Work Distribution}
+\begin{itemize}
+    \item The exercise was split between group members such that Max and Ryan developed part I, the AArch64 emulator, while Aizere and Veer developed part II, the assembler.
+\end{itemize}
+
+\subsection{Coordination}
+\begin{itemize}
+    \item We organized our project by breaking down both the emulator and assembler components into smaller, manageable tasks. These tasks were documented in a collaborative shared spreadsheet and assigned to the respective group members responsible for each part.
+    \item Effective coordination was achieved through collaborative coding sessions, often utilising pair programming where necessary, alongside daily group meetings, during which we provided updates on our progress and discussed any issues encountered.
+    \item Communication was further facilitated through a group chat, which enabled us to promptly address errors and seek assistance from one another.
+\end{itemize}
+
+
+
+\section{Group Dynamics and Future Adaptations}
+\label{sec:group_dynamics}
+\subsection{Current Group Dynamics}
+\begin{itemize}
+    \item Our approach of assigning two team members to each of the first 2 parts of the project enabled us to concurrently work on parts I and II, expediting progress and allowing for an early start on parts III and IV. This system simplified communication, as coordinating tasks between two pairs is more straightforward than managing tasks among four individuals.
+    \item Both pairs have demonstrated effective teamwork, with strong pair coding practices and regular code reviews.
+    \item Moreover collaboration between pairs facilitated fresh perspectives and enabled continuous improvement in already operational code.
+\end{itemize}
+
+
+\subsection{Future Adaptations and Improvements}
+\begin{itemize}
+    \item For parts III and IV, all four members will collaborate on both sections. Part III depends on both the assembler and emulator, necessitating the combined knowledge of both pairs.
+    \item The extension project in part IV, implemented in C, will also require collaboration from all four members. Clear aims and effectively split tasks will be essential to achieve a high-quality program.
+    \item We plan to improve our scheduling by creating a shared calendar to better coordinate availability and avoid delays due to waiting for code pushes to Git.
+    \item This shared calendar will also assist in coordinating the physical use of the Raspberry Pi among team members.
+    \item Increasing frequency of pair coding sessions will enhance the cohesiveness of the code from the start, reducing the need for extensive reformatting of different coding styles later.
+\end{itemize}
+
+\newpage
+\section{Emulator Structure}
+\label{sec:emulator_structure}
+\subsection{Architecture Overview}
+\begin{itemize}
+    \item The emulator's structure was designed via a top-down design, utilising the fact that each unique instruction can be identified using specific bits within the instruction. We grouped instructions hierarchically, starting with major categories such as Direct, Load/Store, and Branch, and further subdividing these as specified in the project guidelines.
+    \item Each instruction is passed through a series of functions, with each function applying our mask function to extract distinguishing bits. Based on these bits, switch cases determine the next function to call. Finally, the instruction is processed in its unique context, with the mask function extracting the specific data such as registers or immediate values.
+    \item Memory and registers are stored as global variables. Main memory is a 2MB array of \texttt{char}. We created a structure for both general and special registers. General-purpose registers were implemented as an array of \texttt{uint64\textunderscore t} and special-purpose as \texttt{uint64\textunderscore t} for the PC and ZR, and \texttt{bool} for the PSTATE.
+\end{itemize}
+
+
+
+\subsection{Reusable Components for Assembler}
+\begin{itemize}
+    \item The emulator's utility functions offer valuable re-usability for the assembler, primarily the masking function.
+    \item In the emulator, this function is utilized for interpreting binary code and extracting different parts of AArch64 instructions. Conversely, in the assembler, the same masking function aids in constructing the binary output for assembly instructions.
+    \item By leveraging this shared functionality, the development of the assembler benefits from the established validity and efficiency of the masking function, promoting code reuse and maintaining consistency across both components of the project via a utility function module.
+\end{itemize}
+
+\section{Implementation Challenges and Mitigation Strategies}
+\label{sec:challenges}
+
+\subsection{GPIO Access and Control - Part III}
+\begin{itemize}
+    \item \textbf{Issue:} Understanding and correctly configuring GPIO pins for output can be challenging, leading to potential misconfiguration or hardware damage.
+    \item \textbf{Mitigation:} Study the documentation thoroughly, implement in incremental steps, and use online resources for support.
+\end{itemize}
+
+\subsection{Synchronization - Part III}
+\begin{itemize}
+    \item \textbf{Issue:} Managing timing delays accurately to achieve a consistent blink rate and ensuring emulator-hardware synchronization can be tricky.
+    \item \textbf{Mitigation:} Use precise timing functions, validate timing on hardware, and compare emulator output with actual hardware results.
+\end{itemize}
+
+
+\subsection{Backwards Compatibility - Part IV}
+\begin{itemize}
+    \item \textbf{Issue:} Maintaining compatibility of the extension program with the original ARM specification to avoid breaking existing functionality.
+    \item \textbf{Mitigation:} Implement regression testing, maintain a detailed changelog, and conduct code reviews and pair programming.
+\end{itemize}
+
+\subsection{Complexity Management - Part IV}
+\begin{itemize}
+    \item \textbf{Issue:} Managing the complexity of the extension project and avoiding an overly ambitious scope.
+    \item \textbf{Mitigation:} Break down the project into manageable tasks, prioritize features, and regularly review and adjust the project plan.
+\end{itemize}
 
 \end{document}
