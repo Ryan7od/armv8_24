@@ -39,7 +39,7 @@ uint32_t twos(uint32_t num) {
 uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
   // Check for invalid bit positions
   if (a < b || a > 31 || b > 31) {
-    fprintf(stderr, "Error: Invalid a: %u or b: %u\n", a, b);
+    ERROR_A("Invalid mask arguments a: %u or b: %u", a, b);
   }
   // Create mask from a and b via 1 shifted by difference of a and b + 1 minus 1 then shifted by a
   uint32_t mask = ((1U << (a - b + 1)) - 1) << b;
@@ -48,22 +48,18 @@ uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b) {
 }
 
 uint64_t mask64_AtoB_shifted(uint64_t instruction, uint8_t a, uint8_t b) {
-    if (a < b || a > 63 || b > 63) {
-    fprintf(stderr, "Error: Invalid a: %u or b: %u\n", a, b);
+  // see notes for mask32
+  if (a < b || a > 63 || b > 63) {
+    ERROR_A("Invalid mask arguments a: %u or b: %u", a, b);
   }
-
   uint64_t mask = ((1U << (a - b + 1)) - 1) << b;
   return (instruction & mask) >> b;
 }
 
+// Set flags
 void setFlagsLogical(uint64_t result, uint64_t a, uint64_t b, bool b64) {
   // Find sign bits of a, b, result
-  bool rSign;
-  if (b64) {
-    rSign = signBit(result, 63);
-  } else {
-    rSign = signBit(result, 31);
-  }
+  bool rSign = b64 ? signBit(result, 63) : signBit(result, 31);
   
   //N is set to the sign bit of the result
   sRegisters.pstate.N = rSign;
@@ -71,32 +67,23 @@ void setFlagsLogical(uint64_t result, uint64_t a, uint64_t b, bool b64) {
   //Z is set only when the result is all zero
   sRegisters.pstate.Z = !result;
 
-  // C & V set to 0
-  sRegisters.pstate.C = 0;
-  sRegisters.pstate.V = 0;
+  // C & V set to false
+  sRegisters.pstate.C = false;
+  sRegisters.pstate.V = false;
 }
 
-void setFlagsArithmetic(uint64_t result, uint64_t a, uint64_t b, bool addition, bool bit64) {
-  setFlagsLogical(result, a, b, bit64);
+void setFlagsArithmetic(uint64_t result, uint64_t a, uint64_t b, bool addition, bool b64) {
+  setFlagsLogical(result, a, b, b64);
   
   // Find sign bits of a, b, result
-  bool aSign;
-  bool bSign;
-  bool rSign;
-  if (bit64) {
-    aSign = signBit(a, 63);
-    bSign = signBit(b, 63);
-    rSign = signBit(result, 63);
-  } else {
-    aSign = signBit(a, 31);
-    bSign = signBit(b, 31);
-    rSign = signBit(result, 31);
-  }
+  bool aSign = b64 ? signBit(a, 63) : signBit(a, 31);
+  bool bSign = b64 ? signBit(b, 63) : signBit(b, 31);;
+  bool rSign = b64 ? signBit(result, 63) : signBit(result, 31);
 
   //V is set when there is signed overflow/underflow (! is pos, else neg)
   if (addition) {
     if ((!aSign && !bSign && rSign) || (aSign && bSign && !rSign)) { 
-      sRegisters.pstate.V = 1; 
+      sRegisters.pstate.V = 1;
     } else {
       sRegisters.pstate.V = 0; 
     }
@@ -108,10 +95,9 @@ void setFlagsArithmetic(uint64_t result, uint64_t a, uint64_t b, bool addition, 
     }
   }
 
-  
   //C in addition is set when an unsigned carry produced
   if (addition) {
-    sRegisters.pstate.C = result < a || result < b || (result > UINT32_MAX && !bit64);
+    sRegisters.pstate.C = result < a || result < b || (result > UINT32_MAX && !b64);
   }
   //C in subtraction is set if there is no borrow
   else {

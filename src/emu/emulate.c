@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
     ERROR_A("Incorrect number of arguments: %d, should be 1 or 2", (argc - 1));
   }
   
+  // Reads in binary file, puts in memory
   readInBinFileMem(argv[1]);
 
   emulate();
@@ -121,7 +122,7 @@ static void printFinalState(int argc, char **argv) {
 
   printNonZeroMem(outPtr);
 
-  if (argc == 2) {
+  if (argc == 2) { // Close unless standard output
     fclose(outPtr);
   }
 }

@@ -3,7 +3,8 @@
 #define zeroReg &sRegisters.Zero
 
 #define ERROR(msg) \
-    fprintf(stderr, "Error in file: %s, line: %d\n", __FILE__, __LINE__);
+    fprintf(stderr, "Error in file: %s, line: %d\n", __FILE__, __LINE__); \
+    fprintf(stderr, "Message: %s", msg);
 
 #define ERROR_A(msg, ...) \
     fprintf(stderr, "Error in file: %s, line: %d\n", __FILE__, __LINE__); \
