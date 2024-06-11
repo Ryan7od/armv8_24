@@ -14,7 +14,7 @@ extern void printEnd(FILE *ptr);
 
 unsigned char memory[MB2] = { 0 };
 Register gRegisters[31] = { 0 };
-SpecialRegisters sRegisters = { 0, 0, { false, false, false, false } };
+SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
 
 
 int main(int argc, char **argv) {
