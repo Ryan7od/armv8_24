@@ -10,41 +10,58 @@
 #include "loadstore.h"
 
 //Prototype functions
-
 static FILE* getOutputPtr( int argc, char **argv );
 static void readInBinFileMem( char * binaryFileName );
 static void emulate( void );
 
-static void printFinalState( FILE *outPtr );
+static void printFinalState( int argc, char **argv );
 static void printRegisters( FILE *outPtr );
 static void printPC( FILE *outPtr );
 static void printPSTATE( FILE *outPtr );
 static void printNonZeroMem( FILE *outPtr );
 
+//Global variables
 unsigned char memory[MB2] = { 0 };
 Register gRegisters[31] = { 0 };
 SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
 
 
 int main(int argc, char **argv) {
+  
   //Ensure 1 or 2 arguments
   if (argc != 3 && argc != 2) {
-    ERROR_A("Incorrect number of arguments: %d", (argc - 1));
+    ERROR_A("Incorrect number of arguments: %d, should be 1 or 2", (argc - 1));
   }
   
   readInBinFileMem(argv[1]);
 
+  emulate();
+  
+  printFinalState(argc, argv);
+  return EXIT_SUCCESS;
+}
 
 
-  //Set output method MOVE TO OUTPUT
-  FILE *outPtr = stdout;
-  if (argc > 2) {
-    outPtr = fopen(argv[2], "w");
-    if (outPtr == NULL) {
-      ERROR_A("Specified output method, %s, does not exist", argv[2]);
+
+// Reads in binary file to memory
+static void readInBinFileMem( char* binaryFileName ) {
+  //Read in file
+  FILE *inPtr;
+  inPtr = fopen(binaryFileName, "rb");
+  unsigned char buffer[4] = { 0 };
+  unsigned char* memPtr = memory;
+  if (inPtr == NULL) {
+    ERROR_A("Specified binary file, %s, does not exist", binaryFileName);
+  }
+  while (fread(buffer, sizeof(buffer), 1, inPtr)) {
+    for (int i = 0; i < 4; i++) {
+      *memPtr++ = buffer[i];
     }
   }
-  
+  fclose(inPtr);
+}
+
+static void emulate( void ) {
   //Run through each step
   uint32_t instruction = fetch32(sRegisters.PC);
 
@@ -88,43 +105,15 @@ int main(int argc, char **argv) {
     }
     instruction = fetch32(sRegisters.PC);
   }
-  
-  printFinalState(outPtr);
-  fclose(outPtr);
-  return EXIT_SUCCESS;
-}
-
-static FILE* getOutputPtr( int argc, char **argv ) {
-
-}
-
-// Reads in binary file to memory
-static void readInBinFileMem( char* binaryFileName ) {
-  //Read in file
-  FILE *inPtr;
-  inPtr = fopen(binaryFileName, "rb");
-  unsigned char buffer[4] = { 0 };
-  unsigned char* memPtr = memory;
-  if (inPtr == NULL) {
-    ERROR_A("Specified binary file, %s, does not exist", binaryFileName);
-  }
-  while (fread(buffer, sizeof(buffer), 1, inPtr)) {
-    for (int i = 0; i < 4; i++) {
-      *memPtr++ = buffer[i];
-    }
-  }
-  fclose(inPtr);
-}
-
-static void emulate( void ) {
-
 }
 
 
 
 //Prints out final state
-static void printFinalState(FILE *outPtr) {
+static void printFinalState(int argc, char **argv) {
   
+  FILE *outPtr = getOutputPtr(argc, argv);
+
   printRegisters(outPtr);
 
   printPC(outPtr);
@@ -133,6 +122,18 @@ static void printFinalState(FILE *outPtr) {
 
   printNonZeroMem(outPtr);
 
+  fclose(outPtr);
+}
+
+static FILE* getOutputPtr( int argc, char **argv ) {
+  //Set output method MOVE TO OUTPUT
+  FILE *outPtr = stdout;
+  if (argc > 2) {
+    outPtr = fopen(argv[2], "w");
+    if (outPtr == NULL) {
+      ERROR_A("Specified output method, %s, does not exist", argv[2]);
+    }
+  }
 }
 
 //Output 31 general registers
