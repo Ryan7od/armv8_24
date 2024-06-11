@@ -15,11 +15,13 @@ struct SA_pair {
     int address;
 };
 
-struct list {
+
+struct dynarray {
     struct SA_pair *data;
     int numItems;
     int size;
 };
+typedef struct dynarray *dynarray;
 
 
 typedef enum {instruction, directive, label} LineType;
@@ -51,7 +53,7 @@ typedef struct {
 
 
 
-void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol);
+void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol);
 static void writeToFile(uint32_t write_val, FILE *file);
 static void parseLogic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
@@ -86,21 +88,25 @@ static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], 
 
 static void parseTwoOperand(InstructionIR instruction, FILE *file);
 static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static void parser(char *line);
 static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
 static uint32_t getReg(char *reg);
 static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+bool firstPassFlag = true;
+dynarray SymbolTable;
 int main(int argc, char **argv) {
-    struct list SymbolTable;
-    SymbolTable.numItems = 0;
-    SymbolTable.size = SymbolTableSize;
-    SymbolTable.data = malloc(SymbolTable.size * sizeof(struct SA_pair));
-
-
-    if (SymbolTable.data == NULL) {
-        printf("memory allocation failed");
-        return 1;
+    SymbolTable = malloc(sizeof(struct dynarray));
+    if (SymbolTable == NULL) {
+        perror("memory allocation failed");
+        exit(1);
+    }
+    SymbolTable->numItems = 0;
+    SymbolTable->size = SymbolTableSize;
+    SymbolTable->data = malloc(SymbolTable->size * sizeof(struct SA_pair));
+    if (SymbolTable->data == NULL) {
+        free(SymbolTable);
+        perror("memory allocation failed");
+        exit(1);
     }
 
     OpcodeMapping opcodeMapping[] = {
@@ -185,7 +191,7 @@ int main(int argc, char **argv) {
    return EXIT_SUCCESS;
 };
 
-void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol) {
+static void growTable(dynarray mySymbolTable) {
     if (mySymbolTable->numItems == mySymbolTable->size) {
         mySymbolTable->size *= 2;
         mySymbolTable->data = realloc(mySymbolTable->data, mySymbolTable->size * sizeof(struct SA_pair));
@@ -193,9 +199,15 @@ void addToTable(struct list *mySymbolTable, struct SA_pair new_symbol) {
             printf("Symbol table failed to be resized");
         }
     }
+}
+
+void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol) {
     mySymbolTable->data[mySymbolTable->numItems] = new_symbol;
     mySymbolTable->numItems++;
 }
+
+
+
 void fileProcessor(const char *filename) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -206,18 +218,27 @@ void fileProcessor(const char *filename) {
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
+    int lineNo = 0;
 
     while ((read = getline(&line, &len, file)) != -1) {
         // Remove trailing newline character
         if (line[read - 1] == '\n') {
             line[read - 1] = '\0';
         }
-        parser(line);
+        if (!firstPassFlag) {
+            parser(line);
+        } else {
+            if (isalpha(*line) && line[read - 2] == ':') {
+                //TODO
+            } else {
+                lineNo++;
+            }
+        }
     }
-
     free(line);
     fclose(file);
 }
+
 
 
 void tokenizer(char instruction[]) {
@@ -241,25 +262,19 @@ void tokenizer(char instruction[]) {
 
 
 static void parser(char *line) {
-
-    char *s = line;
-    if (*s == '.') {
+    if (*line == '.') {
         printf("d");
     } else {
-        char *temp = line;
-        char *end = line;
-        while (*end != '\0') {
-            temp = end;
-            end++;
-        }
-        if (*temp == ':' && isalpha(*s)) {
-            printf("lbl");
+        int length = strlen(line);
+        if (line[length - 1] == ':' && isalpha(*line)) {
+            return;
         } else {
             tokenizer(line);
         }
     }
-
 }
+
+
 
 
 
