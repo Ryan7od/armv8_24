@@ -3,12 +3,9 @@
 //
 
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include "memReg.h"
+#include "utility.h"
 
-
-
-//Global variables
-//2MB of memory
-unsigned char memory[MB2] = { 0 };
-Register gRegisters[31] = { 0 };
-SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };

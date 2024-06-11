@@ -19,15 +19,16 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bfddbca7-df03-4f5e-a2b8-dd628950e711" name="Changes" comment="Makefile debugging 1">
+    <list default="true" id="bfddbca7-df03-4f5e-a2b8-dd628950e711" name="Changes" comment="Makefile debugging 2">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/emu/branches.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/branches.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/emu/dpimmediate.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/dpimmediate.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/emu/dpimmediate.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/dpimmediate.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/emu/dpregister.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/dpregister.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/emu/dpregister.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/dpregister.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/emu/emulate.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/emulate.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/emu/emulate.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/emulate.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/emu/loadstore.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/loadstore.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/emu/loadstore.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/loadstore.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/emu/emulate.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/emu/memReg.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/memReg.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/emu/memReg.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/memReg.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/emu/utility.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/utility.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/emu/utility.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/emu/utility.h" afterDir="false" />
     </list>
@@ -131,7 +132,7 @@
       <window_info id="Learn" show_stripe_button="false" />
       <window_info id="DFA" show_stripe_button="false" />
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.1468099" />
-      <window_info id="Commit" order="1" weight="0.24707031" />
+      <window_info id="Commit" order="1" weight="0.1468099" />
       <window_info id="Structure" order="2" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Database Changes" show_stripe_button="false" />
       <window_info anchor="bottom" id="TypeScript" show_stripe_button="false" />
@@ -211,6 +212,7 @@
       <list>
         <item itemvalue="Makefile Target.clean" />
         <item itemvalue="Makefile Target.all" />
+        <item itemvalue="Makefile Target.clean" />
         <item itemvalue="Makefile Target.all" />
         <item itemvalue="Makefile Target.clean" />
       </list>
@@ -266,7 +268,15 @@
       <option name="project" value="LOCAL" />
       <updated>1717943977294</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Makefile debugging 2">
+      <option name="closed" value="true" />
+      <created>1717944993558</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1717944993558</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -287,7 +297,8 @@
     <MESSAGE value="Created fileProcessor function which reads assembly files and calls the parser for each line" />
     <MESSAGE value="Created tokenizer function" />
     <MESSAGE value="Makefile debugging 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="Makefile debugging 1" />
+    <MESSAGE value="Makefile debugging 2" />
+    <option name="LAST_COMMIT_MESSAGE" value="Makefile debugging 2" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

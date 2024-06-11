@@ -1,10 +1,27 @@
-//
-// Created by maxdstoddard on 6/9/24.
-//
+#ifndef MemReg
+#define MemReg
 
-#ifndef ARMV8_24_MEMREG_H
-#define ARMV8_24_MEMREG_H
+#endif MemReg
 
-#endif //ARMV8_24_MEMREG_H
+#define MB2 2097152 // 2MB of memory (2*2^20)
 
+typedef uint64_t Register;
 
+typedef struct {
+    bool N;
+    bool Z;
+    bool C;
+    bool V;
+} PSTATE;
+
+typedef struct  {
+    Register PC;
+    Register Zero;
+    PSTATE pstate;
+} SpecialRegisters;
+
+//Global variables
+//2MB of memory
+unsigned char memory[MB2] = { 0 };
+Register gRegisters[31] = { 0 };
+SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
