@@ -134,11 +134,7 @@ void loadStoreHandler(uint32_t instruction) {
             loadStoreUnsignedOffsetHandler(instruction);
         } else {
             const uint8_t diff2 = mask32_AtoB_shifted(instruction, 21, 21);
-            if (diff2) { //Register offset
-                loadStoreRegOffHandler(instruction);
-            } else { // Pre/Post-index
-                loadStorePIndexHandler(instruction);
-            }
+            diff2 ? loadStoreRegOffHandler(instruction) : loadStorePIndexHandler(instruction);
         }
     }
 }

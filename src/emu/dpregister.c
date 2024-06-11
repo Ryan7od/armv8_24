@@ -41,7 +41,7 @@ static void dataProcessingRegArithHandler(uint32_t instruction) {
             arithmeticShiftRight(&op2, operand, sf);
             break;
         default:
-            fprintf(stderr, "Error: Shift is unknown (%x)", shift);
+            ERROR_A("Shift unknown: %x", shift);
             break;
     }
 
@@ -112,7 +112,7 @@ static void dataProcessingRegLogicHandler(uint32_t instruction) {
             rotateRight(&op2, operand, sf);
             break;
         default:
-            fprintf(stderr, "Error: shift unknown in dpRegLogicHandler (%x)", shift);
+            ERROR_A("Shift unknown: %x", shift);
             break;
     }
 
@@ -146,7 +146,7 @@ static void dataProcessingRegLogicHandler(uint32_t instruction) {
             setFlagsLogical(result, op1, op2, sf);
             break;
         default:
-            fprintf(stderr, "Unknown opc in dpRegisterLogicHandler (%x)", opc);
+            ERROR_A("Unknown opc: %x", opc);
             break;
     }
 
@@ -175,16 +175,11 @@ static void dataProcessingRegMultHandler(uint32_t instruction) {
     // Initialise op_a, op_n, op_m to 0, also handles case of zero register
     uint64_t op_a = 0; // ra
     uint64_t op_n = 0; // rn
-    uint64_t op_m = 0;
-    if (sf) {
-        if (ra != 0b11111) op_a = read64(&gRegisters[ra]);
-        if (rn != 0b11111) op_n = read64(&gRegisters[rn]);
-        if (rm != 0b11111) op_m = read64(&gRegisters[rm]);
-    } else {
-        if (ra != 0b11111) op_a = read32(&gRegisters[ra]);
-        if (rn != 0b11111) op_n = read32(&gRegisters[rn]);
-        if (rm != 0b11111) op_m = read32(&gRegisters[rm]);
-    }
+    uint64_t op_m = 0; // rm
+    
+    if (ra != 0b11111) op_a = sf ? read64(&gRegisters[ra]) : read32(&gRegisters[ra]);
+    if (rn != 0b11111) op_n = sf ? read64(&gRegisters[rn]) : read32(&gRegisters[rn]);
+    if (rm != 0b11111) op_m = sf ? read64(&gRegisters[rm]) : read32(&gRegisters[rm]);
 
     uint64_t product = op_n * op_m;
 
@@ -211,31 +206,15 @@ void dataProcessingRegHandler(uint32_t instruction) {
         if (opr == 0b1000) //Just to confirm correct instruction even though mult is the only case of M=1
             dataProcessingRegMultHandler(instruction);
         else {
-            fprintf(stderr, "Unknown instruction with m flag = 1\n");
+            ERROR_A("Unknown opr with M=1: %x", opr)
         }
     } else { // M = 0
-        switch (opr) {
-            //Arithmetic (1xx0)
-            case (0b1110):
-            case (0b1100):
-            case (0b1010):
-            case (0b1000):
-                dataProcessingRegArithHandler(instruction);
-                break;
-                //Bit-Logic (0xxx)
-            case (0b0000):
-            case (0b0001):
-            case (0b0010):
-            case (0b0011):
-            case (0b0100):
-            case (0b0101):
-            case (0b0110):
-            case (0b0111):
-                dataProcessingRegLogicHandler(instruction);
-                break;
-            default:
-                fprintf(stderr, "Unknown opr with M=0 in dpRegisterHandle (%x)", opr);
-                break;
+        if (opr & 0b1001 == 0b1000) { //Arithmetic (1xx0)
+            dataProcessingRegArithHandler(instruction);
+        } else if (opr & 0b1000 == 0b0000) { //Bit-Logic (0xxx)
+            dataProcessingRegLogicHandler(instruction);
+        } else { // Unknown
+            ERROR_A("Unknown opr with M=0: %x", opr);
         }
     }
 }
