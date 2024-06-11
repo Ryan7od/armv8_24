@@ -10,11 +10,12 @@
 #include "loadstore.h"
 
 //Prototype functions
-static void outputFinalState(FILE *outPtr);
-static void outputRegisters(FILE *outPtr);
-static void outputPC(FILE *outPtr);
-static void outputPState(FILE *outPtr);
-static void outputMemory(FILE *outPtr);
+
+static void outputFinalState( FILE *outPtr );
+static void outputRegisters( FILE *outPtr );
+static void outputPC( FILE *outPtr );
+static void outputPState( FILE *outPtr );
+static void outputMemory( FILE *outPtr );
 
 unsigned char memory[MB2] = { 0 };
 Register gRegisters[31] = { 0 };
@@ -95,7 +96,7 @@ int main(int argc, char **argv) {
   }
 
   outputFinalState(outPtr);
-  //fcloseall();
+  fcloseall();
   return EXIT_SUCCESS;
 }
 
