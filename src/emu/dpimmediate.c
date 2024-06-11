@@ -16,7 +16,7 @@ static void dataProcessingImmWideMoveHandler(uint32_t instruction) {
 
     imm16 = imm16 << (hw << 4); //Shifted by hw * 16
 
-    uint64_t mask = 0; // Initialise mask
+    uint64_t mask = 0; // Initialise mask before case statement
     switch (opc) {
         //movn
         case (0b00):
@@ -48,7 +48,7 @@ static void dataProcessingImmWideMoveHandler(uint32_t instruction) {
             }
             break;
         default:
-            fprintf(stderr, "Error: Unknown opc in ImmWidMov (%x)", opc);
+            ERROR_A("Unknown opc: %x", opc);
             break;
 
     }
@@ -90,25 +90,21 @@ static void dataProcessingImmArithHandler(uint32_t instruction) {
 
     //TODO: As far as I'm aware we dont have to code for 1111 since it "also" encodes ZR and that does nothing, but it still encodes R31
     //Set value based on sf
-    if (sf) {
-        write64(&gRegisters[rd], result);
-    } else {
-        write32(&gRegisters[rd], result);
-    }
+    sf ? write64(&gRegisters[rd], result) : write32(&gRegisters[rd], result);
 }
 
 void dataProcessingImmHandler(uint32_t instruction) {
     const uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
 
     switch (opi) {
-        case 0b010:
+        case (0b010):
             dataProcessingImmArithHandler(instruction);
             break;
-        case 0b101:
+        case (0b101):
             dataProcessingImmWideMoveHandler(instruction);
             break;
         default:
-            fprintf(stderr, "Error: Unknown data processing immediate instruction");
+            ERROR_A("Unknown data processing immediate instruction", opi);
             break;
     }
 }
