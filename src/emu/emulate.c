@@ -134,6 +134,7 @@ static FILE* getOutputPtr( int argc, char **argv ) {
       ERROR_A("Specified output method, %s, does not exist", argv[2]);
     }
   }
+  return outPtr;
 }
 
 //Output 31 general registers
@@ -141,9 +142,9 @@ static void printRegisters(FILE *outPtr) {
   for (int i = 0; i < 31; i++) {
     // Formatted output using register values
     if (i < 10) {
-      fprintf(outPtr, "X0%d = %016llx\n", i, read64(&gRegisters[i]));
+      fprintf(outPtr, "X0%d = %016llx\n", i, (unsigned long long)read64(&gRegisters[i]));
     } else {
-      fprintf(outPtr, "X%d = %016llx\n", i, read64(&gRegisters[i]));
+      fprintf(outPtr, "X%d = %016llx\n", i, (unsigned long long)read64(&gRegisters[i]));
     }
     
   }
@@ -151,7 +152,7 @@ static void printRegisters(FILE *outPtr) {
 
 //Output Program Counter
 static void printPC(FILE *outPtr) {
-  fprintf(outPtr, "PC  = %016llx\n", read64(&sRegisters.PC));
+  fprintf(outPtr, "PC  = %016llx\n", (unsigned long long)read64(&sRegisters.PC));
 }
 
 // Output PSTATE
@@ -169,11 +170,11 @@ static void printPSTATE(FILE *outPtr) {
 // Outputs non 0 memory
 static void printNonZeroMem(FILE *outPtr) {
   for (int i = 0; i < MB2; i += 4) {
-    uint32_t ith_word_memory = fetch32(i);
+    long unsigned int ith_word_memory = fetch32(i);
     
     // Only output if not 0
     if (ith_word_memory) {
-      fprintf(outPtr, "0x%08lx: %08lx\n", i, ith_word_memory);
+      fprintf(outPtr, "0x%08lx: %08lx\n", (long unsigned int)i, ith_word_memory);
     }
   }
 }
