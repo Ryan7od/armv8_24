@@ -4,12 +4,12 @@
 
 #define ERROR(msg) \
     fprintf(stderr, "Error in file: %s, line: %d\n", __FILE__, __LINE__); \
-    fprintf(stderr, "Message: %s", msg);
+    fprintf(stderr, "Message: %s", msg); \
+    exit(-1);
 
 #define ERROR_A(msg, ...) \
     fprintf(stderr, "Error in file: %s, line: %d\n", __FILE__, __LINE__); \
-    fprintf(stderr, "Message: " msg, __VA_ARGS__); \
-    fprintf(stderr, "\n"); \
+    fprintf(stderr, "Message: " msg "\n", __VA_ARGS__); \
     exit(-1);
 
 extern uint32_t twos(uint32_t num);

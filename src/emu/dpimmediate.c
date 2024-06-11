@@ -104,7 +104,7 @@ void dataProcessingImmHandler(uint32_t instruction) {
             dataProcessingImmWideMoveHandler(instruction);
             break;
         default:
-            ERROR_A("Unknown data processing immediate instruction", opi);
+            ERROR_A("Unknown data processing immediate instruction: %x", opi);
             break;
     }
 }

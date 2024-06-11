@@ -209,9 +209,9 @@ void dataProcessingRegHandler(uint32_t instruction) {
             ERROR_A("Unknown opr with M=1: %x", opr)
         }
     } else { // M = 0
-        if (opr & 0b1001 == 0b1000) { //Arithmetic (1xx0)
+        if ((opr & 0b1001) == 0b1000) { //Arithmetic (1xx0)
             dataProcessingRegArithHandler(instruction);
-        } else if (opr & 0b1000 == 0b0000) { //Bit-Logic (0xxx)
+        } else if ((opr & 0b1000) == 0b0000) { //Bit-Logic (0xxx)
             dataProcessingRegLogicHandler(instruction);
         } else { // Unknown
             ERROR_A("Unknown opr with M=0: %x", opr);
