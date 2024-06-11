@@ -3,14 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-
-#ifndef MemReg
-#define MemReg
-
-#include "memReg.h"
 #include "utility.h"
-
-#endif MemReg
 
 //Writes unless zero reg, since 32 bits, moves to the front of register by LSL
 void write32(Register* reg, uint32_t val) {

@@ -1,23 +1,13 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "utility.h"
 #include "dpimmediate.h"
 
-void dataProcessingImmHandler(uint32_t instruction) {
-    const uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
 
-    switch (opi) {
-        case 0b010:
-            dataProcessingImmArithHandler(instruction);
-            break;
-        case 0b101:
-            dataProcessingImmWideMoveHandler(instruction);
-            break;
-        default:
-            fprintf(stderr, "Error: Unknown data processing immediate instruction");
-            break;
-    }
-}
-
-void dataProcessingImmWideMoveHandler(uint32_t instruction) {
+static void dataProcessingImmWideMoveHandler(uint32_t instruction) {
     const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
     const uint8_t hw = mask32_AtoB_shifted(instruction, 22, 21);
     const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
@@ -64,7 +54,7 @@ void dataProcessingImmWideMoveHandler(uint32_t instruction) {
     }
 }
 
-void dataProcessingImmArithHandler(uint32_t instruction) {
+static void dataProcessingImmArithHandler(uint32_t instruction) {
     const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
     const uint8_t opc = mask32_AtoB_shifted(instruction, 30, 29);
     const uint8_t sf = mask32_AtoB_shifted(instruction, 31, 31);
@@ -104,5 +94,21 @@ void dataProcessingImmArithHandler(uint32_t instruction) {
         write64(&gRegisters[rd], result);
     } else {
         write32(&gRegisters[rd], result);
+    }
+}
+
+void dataProcessingImmHandler(uint32_t instruction) {
+    const uint8_t opi = mask32_AtoB_shifted(instruction, 25, 23);
+
+    switch (opi) {
+        case 0b010:
+            dataProcessingImmArithHandler(instruction);
+            break;
+        case 0b101:
+            dataProcessingImmWideMoveHandler(instruction);
+            break;
+        default:
+            fprintf(stderr, "Error: Unknown data processing immediate instruction");
+            break;
     }
 }

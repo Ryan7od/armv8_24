@@ -1,16 +1,6 @@
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include "memReg.h"
+#include "emulate.h"
 
-#ifndef Utility
-#define Utility
-
-#endif Utility
-
-#define strlen(arr) = sizeof(arr)/sizeof(arr[0])
+#define zeroReg &sRegisters.Zero
 
 extern uint32_t twos(uint32_t num);
 extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);

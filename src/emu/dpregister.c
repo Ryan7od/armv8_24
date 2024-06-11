@@ -1,48 +1,13 @@
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
+#include "utility.h"
 #include "dpregister.h"
 
-void dataProcessingRegHandler(uint32_t instruction) {
-    const uint8_t m = mask32_AtoB_shifted(instruction, 28, 28);
-    const uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
 
-    if (m) { // M = 1
-        if (opr == 0b1000) //Just to confirm correct instruction even though mult is the only case of M=1
-            dataProcessingRegMultHandler(instruction);
-        else {
-            fprintf(stderr, "Unknown instruction with m flag = 1\n");
-        }
-    } else { // M = 0
-        switch (opr) {
-            //Arithmetic (1xx0)
-            case (0b1110):
-            case (0b1100):
-            case (0b1010):
-            case (0b1000):
-                dataProcessingRegArithHandler(instruction);
-                break;
-                //Bit-Logic (0xxx)
-            case (0b0000):
-            case (0b0001):
-            case (0b0010):
-            case (0b0011):
-            case (0b0100):
-            case (0b0101):
-            case (0b0110):
-            case (0b0111):
-                dataProcessingRegLogicHandler(instruction);
-                break;
-            default:
-                fprintf(stderr, "Unknown opr with M=0 in dpRegisterHandle (%x)", opr);
-                break;
-        }
-    }
-}
-
-void dataProcessingRegArithHandler(uint32_t instruction) {
+static void dataProcessingRegArithHandler(uint32_t instruction) {
     const uint8_t shift = mask32_AtoB_shifted(instruction, 23, 22);
     const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
     const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
@@ -106,7 +71,7 @@ void dataProcessingRegArithHandler(uint32_t instruction) {
     }
 }
 
-void dataProcessingRegLogicHandler(uint32_t instruction) {
+static void dataProcessingRegLogicHandler(uint32_t instruction) {
     const uint8_t rd = mask32_AtoB_shifted(instruction, 4, 0);
     const uint8_t rn = mask32_AtoB_shifted(instruction, 9, 5);
     const uint8_t operand = mask32_AtoB_shifted(instruction, 15, 10);
@@ -195,7 +160,7 @@ void dataProcessingRegLogicHandler(uint32_t instruction) {
     }
 }
 
-void dataProcessingRegMultHandler(uint32_t instruction) {
+static void dataProcessingRegMultHandler(uint32_t instruction) {
     const uint8_t rd = mask32_AtoB_shifted(instruction, 4,  0);
     const uint8_t rn = mask32_AtoB_shifted(instruction, 9,  5);
     const uint8_t ra = mask32_AtoB_shifted(instruction, 14, 10);
@@ -235,5 +200,42 @@ void dataProcessingRegMultHandler(uint32_t instruction) {
         write64(&gRegisters[rd], result);
     } else {
         write32(&gRegisters[rd], result);
+    }
+}
+
+void dataProcessingRegHandler(uint32_t instruction) {
+    const uint8_t m = mask32_AtoB_shifted(instruction, 28, 28);
+    const uint8_t opr = mask32_AtoB_shifted(instruction, 24, 21);
+
+    if (m) { // M = 1
+        if (opr == 0b1000) //Just to confirm correct instruction even though mult is the only case of M=1
+            dataProcessingRegMultHandler(instruction);
+        else {
+            fprintf(stderr, "Unknown instruction with m flag = 1\n");
+        }
+    } else { // M = 0
+        switch (opr) {
+            //Arithmetic (1xx0)
+            case (0b1110):
+            case (0b1100):
+            case (0b1010):
+            case (0b1000):
+                dataProcessingRegArithHandler(instruction);
+                break;
+                //Bit-Logic (0xxx)
+            case (0b0000):
+            case (0b0001):
+            case (0b0010):
+            case (0b0011):
+            case (0b0100):
+            case (0b0101):
+            case (0b0110):
+            case (0b0111):
+                dataProcessingRegLogicHandler(instruction);
+                break;
+            default:
+                fprintf(stderr, "Unknown opr with M=0 in dpRegisterHandle (%x)", opr);
+                break;
+        }
     }
 }

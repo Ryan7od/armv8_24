@@ -1,37 +1,14 @@
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
-#ifndef loadstore
-#define loadstore
-
-#include "loadstore.h"
 #include "utility.h"
+#include "loadstore.h"
 
-#endif
 
-void loadStoreHandler(uint32_t instruction) {
-    const uint8_t diff = mask32_AtoB_shifted(instruction, 31, 31);
 
-    if (!diff) { //Load literal
-        loadStoreLoadLiteralHandler(instruction);
-    } else {
-        const uint8_t u = mask32_AtoB_shifted(instruction, 24, 24);
-        if (u) { //Unsigned offset
-            loadStoreUnsignedOffsetHandler(instruction);
-        } else {
-            const uint8_t diff2 = mask32_AtoB_shifted(instruction, 21, 21);
-            if (diff2) { //Register offset
-                loadStoreRegOffHandler(instruction);
-            } else { // Pre/Post-index
-                loadStorePIndexHandler(instruction);
-            }
-        }
-    }
-}
-
-void loadStoreLoadLiteralHandler(uint32_t instruction) {
+static void loadStoreLoadLiteralHandler(uint32_t instruction) {
     const uint32_t simm19 = mask32_AtoB_shifted(instruction, 23, 5);
     const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
     const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
@@ -58,7 +35,7 @@ void loadStoreLoadLiteralHandler(uint32_t instruction) {
     }
 }
 
-void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address) {
+static void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address) {
     if (l) { //Load
         if (sf) {
             uint64_t data = 0;
@@ -92,7 +69,7 @@ void loadStoreHelperHandler(uint8_t l, uint8_t sf, uint8_t rt, uint64_t address)
     }
 }
 
-void loadStoreUnsignedOffsetHandler(uint32_t instruction) {
+static void loadStoreUnsignedOffsetHandler(uint32_t instruction) {
     const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
     const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
     const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
@@ -114,7 +91,7 @@ void loadStoreUnsignedOffsetHandler(uint32_t instruction) {
     loadStoreHelperHandler(l, sf, rt, address);
 }
 
-void loadStoreRegOffHandler(uint32_t instruction) {
+static void loadStoreRegOffHandler(uint32_t instruction) {
     const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
     const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
     const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
@@ -126,7 +103,7 @@ void loadStoreRegOffHandler(uint32_t instruction) {
     loadStoreHelperHandler(l, sf, rt, address);
 }
 
-void loadStorePIndexHandler(uint32_t instruction) {
+static void loadStorePIndexHandler(uint32_t instruction) {
     const uint8_t xn = mask32_AtoB_shifted(instruction, 9, 5);
     const uint8_t sf = mask32_AtoB_shifted(instruction, 30, 30);
     const uint8_t rt = mask32_AtoB_shifted(instruction, 4, 0);
@@ -143,5 +120,25 @@ void loadStorePIndexHandler(uint32_t instruction) {
         loadStoreHelperHandler(l, sf, rt, address);
         address +=  + sExtend64(simm9, 8);
         write64(&gRegisters[xn], address);
+    }
+}
+
+void loadStoreHandler(uint32_t instruction) {
+    const uint8_t diff = mask32_AtoB_shifted(instruction, 31, 31);
+
+    if (!diff) { //Load literal
+        loadStoreLoadLiteralHandler(instruction);
+    } else {
+        const uint8_t u = mask32_AtoB_shifted(instruction, 24, 24);
+        if (u) { //Unsigned offset
+            loadStoreUnsignedOffsetHandler(instruction);
+        } else {
+            const uint8_t diff2 = mask32_AtoB_shifted(instruction, 21, 21);
+            if (diff2) { //Register offset
+                loadStoreRegOffHandler(instruction);
+            } else { // Pre/Post-index
+                loadStorePIndexHandler(instruction);
+            }
+        }
     }
 }
