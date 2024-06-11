@@ -10,7 +10,7 @@
 #include "loadstore.h"
 
 //Prototype functions
-extern void printEnd(FILE *ptr);
+static void printEnd(FILE *ptr);
 
 unsigned char memory[MB2] = { 0 };
 Register gRegisters[31] = { 0 };
@@ -20,8 +20,7 @@ SpecialRegisters sRegisters = { 0, 0, { false, true, false, false } };
 int main(int argc, char **argv) {
   //Ensure 1 or 2 arguments
   if (argc != 3 && argc != 2) {
-    fprintf(stderr, "Error: wrong number of arguments");
-    return -1;
+    ERROR_A("Incorrect number of arguments: %d", (argc - 1));
   }
 
   //Set output method
@@ -29,8 +28,7 @@ int main(int argc, char **argv) {
   if (argc > 2) {
     outPtr = fopen(argv[2], "w");
     if (outPtr == NULL) {
-      fprintf(stderr, "Error: opening %s", argv[2]);
-      return -2;
+      ERROR_A("Specified output method, %s, does not exist", argv[2]);
     }
   }
 
@@ -40,8 +38,7 @@ int main(int argc, char **argv) {
   unsigned char buffer[4] = { 0 };
   unsigned char* memPtr = memory;
   if (inPtr == NULL) {
-    fprintf(stderr, "Error: File is null & doesn't exist");
-    return -3;
+    ERROR_A("Specified binary file, %s, does not exist", argv[1]);
   }
   while (fread(buffer, sizeof(buffer), 1, inPtr)) {
     for (int i = 0; i < 4; i++) {
@@ -84,8 +81,7 @@ int main(int argc, char **argv) {
         skip = true;
         break;
       default:
-        fprintf(stderr, "Error: Non implemented instruction: %x (main)\n", op0);
-        return -4;
+        ERROR_A("Non-implemented instruction: %x", instruction);
     }
 
     if (!skip) {
@@ -101,18 +97,25 @@ int main(int argc, char **argv) {
 
 
 
-//Prints out final states
-void printEnd(FILE *ptr) {
+//Prints out final state
+static void printEnd(FILE *ptr) {
+  //Output 31 general registers
   for (int i = 0; i < 31; i++) {
     if (i < 10) fprintf(ptr, "X0%i = %016llx\n", i, read64(&gRegisters[i]));
     else fprintf(ptr, "X%i = %016llx\n", i, read64(&gRegisters[i]));
   }
+
+  // Output Program Counter
   fprintf(ptr, "PC  = %016llx\n", read64(&sRegisters.PC));
+  
+  // Output PSTATE
   fprintf(ptr, "PSTATE: ");
-  if(sRegisters.pstate.N) fprintf(ptr, "N"); else fprintf(ptr, "-");
+  fprintf(ptr, (sRegisters.pstate.N ? "N" : "-"));
   if(sRegisters.pstate.Z) fprintf(ptr, "Z"); else fprintf(ptr, "-");
   if(sRegisters.pstate.C) fprintf(ptr, "C"); else fprintf(ptr, "-");
   if(sRegisters.pstate.V) fprintf(ptr, "V\n"); else fprintf(ptr, "-\n");
+  
+  // Output
   for (int i = 0; i < MB2; i += 4) {
     uint32_t word = fetch32(i);
     if (word) {

@@ -2,6 +2,15 @@
 
 #define zeroReg &sRegisters.Zero
 
+#define ERROR(msg) \
+    fprintf(stderr, "Error in file: %s, line: %d\n", __FILE__, __LINE__);
+
+#define ERROR_A(msg, ...) \
+    fprintf(stderr, "Error in file: %s, line: %d\n", __FILE__, __LINE__); \
+    fprintf(stderr, "Message: " msg, __VA_ARGS__); \
+    fprintf(stderr, "\n"); \
+    exit(-1);
+
 extern uint32_t twos(uint32_t num);
 extern uint32_t mask32_AtoB_shifted(uint32_t instruction, uint8_t a, uint8_t b);
 extern uint64_t mask64_AtoB_shifted(uint64_t instruction, uint8_t a, uint8_t b);

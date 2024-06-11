@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdarg.h>
 #define MB2 2097152 // 2MB of memory (2*2^20)
 
 typedef uint64_t Register;
