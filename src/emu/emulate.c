@@ -12,14 +12,14 @@
 //Prototype functions
 
 static FILE* getOutputPtr( int argc, char **argv );
-static void putBinFileToMemory( int argc, char **argv );
+static void readInBinFileMem( char * binaryFileName );
 static void emulate( void );
 
-static void outputFinalState( FILE *outPtr );
-static void outputRegisters( FILE *outPtr );
-static void outputPC( FILE *outPtr );
-static void outputPState( FILE *outPtr );
-static void outputMemory( FILE *outPtr );
+static void printFinalState( FILE *outPtr );
+static void printRegisters( FILE *outPtr );
+static void printPC( FILE *outPtr );
+static void printPSTATE( FILE *outPtr );
+static void printNonZeroMem( FILE *outPtr );
 
 unsigned char memory[MB2] = { 0 };
 Register gRegisters[31] = { 0 };
@@ -32,7 +32,9 @@ int main(int argc, char **argv) {
     ERROR_A("Incorrect number of arguments: %d", (argc - 1));
   }
   
-  char * binaryFileName = argv[1];
+  readInBinFileMem(argv[1]);
+
+
 
   //Set output method MOVE TO OUTPUT
   FILE *outPtr = stdout;
@@ -42,21 +44,6 @@ int main(int argc, char **argv) {
       ERROR_A("Specified output method, %s, does not exist", argv[2]);
     }
   }
-
-  //Read in file
-  FILE *inPtr;
-  inPtr = fopen(binaryFileName, "rb");
-  unsigned char buffer[4] = { 0 };
-  unsigned char* memPtr = memory;
-  if (inPtr == NULL) {
-    ERROR_A("Specified binary file, %s, does not exist", argv[1]);
-  }
-  while (fread(buffer, sizeof(buffer), 1, inPtr)) {
-    for (int i = 0; i < 4; i++) {
-      *memPtr++ = buffer[i];
-    }
-  }
-  fclose(inPtr);
   
   //Run through each step
   uint32_t instruction = fetch32(sRegisters.PC);
@@ -102,7 +89,7 @@ int main(int argc, char **argv) {
     instruction = fetch32(sRegisters.PC);
   }
   
-  outputFinalState(outPtr);
+  printFinalState(outPtr);
   fclose(outPtr);
   return EXIT_SUCCESS;
 }
@@ -111,8 +98,22 @@ static FILE* getOutputPtr( int argc, char **argv ) {
 
 }
 
-static void putBinFileToMemory( int argc, char **argv ) {
-
+// Reads in binary file to memory
+static void readInBinFileMem( char* binaryFileName ) {
+  //Read in file
+  FILE *inPtr;
+  inPtr = fopen(binaryFileName, "rb");
+  unsigned char buffer[4] = { 0 };
+  unsigned char* memPtr = memory;
+  if (inPtr == NULL) {
+    ERROR_A("Specified binary file, %s, does not exist", binaryFileName);
+  }
+  while (fread(buffer, sizeof(buffer), 1, inPtr)) {
+    for (int i = 0; i < 4; i++) {
+      *memPtr++ = buffer[i];
+    }
+  }
+  fclose(inPtr);
 }
 
 static void emulate( void ) {
@@ -122,46 +123,56 @@ static void emulate( void ) {
 
 
 //Prints out final state
-static void outputFinalState(FILE *outPtr) {
+static void printFinalState(FILE *outPtr) {
   
-  outputRegisters(outPtr);
+  printRegisters(outPtr);
 
-  outputPC(outPtr);
+  printPC(outPtr);
 
-  outputPState(outPtr);
+  printPSTATE(outPtr);
 
-  outputMemory(outPtr);
+  printNonZeroMem(outPtr);
 
 }
 
 //Output 31 general registers
-static void outputRegisters(FILE *outPtr) {
+static void printRegisters(FILE *outPtr) {
   for (int i = 0; i < 31; i++) {
-    if (i < 10) fprintf(outPtr, "X0%i = %016llx\n", i, read64(&gRegisters[i]));
-    else fprintf(outPtr, "X%i = %016llx\n", i, read64(&gRegisters[i]));
+    // Formatted output using register values
+    if (i < 10) {
+      fprintf(outPtr, "X0%d = %016llx\n", i, read64(&gRegisters[i]));
+    } else {
+      fprintf(outPtr, "X%d = %016llx\n", i, read64(&gRegisters[i]));
+    }
+    
   }
 }
 
 //Output Program Counter
-static void outputPC(FILE *outPtr) {
+static void printPC(FILE *outPtr) {
   fprintf(outPtr, "PC  = %016llx\n", read64(&sRegisters.PC));
 }
 
 // Output PSTATE
-static void outputPState(FILE *outPtr) {
-  fprintf(outPtr, "PSTATE: ");
-  fprintf(outPtr, (sRegisters.pstate.N ? "N" : "-"));
-  if(sRegisters.pstate.Z) fprintf(outPtr, "Z"); else fprintf(outPtr, "-");
-  if(sRegisters.pstate.C) fprintf(outPtr, "C"); else fprintf(outPtr, "-");
-  if(sRegisters.pstate.V) fprintf(outPtr, "V\n"); else fprintf(outPtr, "-\n");
+static void printPSTATE(FILE *outPtr) {
+  fprintf( outPtr, "PSTATE: " );
+
+  fprintf( outPtr, sRegisters.pstate.N ? "N" : "-" );
+  fprintf( outPtr, sRegisters.pstate.Z ? "Z" : "-" );
+  fprintf( outPtr, sRegisters.pstate.C ? "C" : "-" );
+  fprintf( outPtr, sRegisters.pstate.V ? "V" : "-" );
+  
+  fprintf( outPtr, "\n" );
 }
 
-//Outputs memory
-static void outputMemory(FILE *outPtr) {
+// Outputs non 0 memory
+static void printNonZeroMem(FILE *outPtr) {
   for (int i = 0; i < MB2; i += 4) {
-    uint32_t word = fetch32(i);
-    if (word) {
-      fprintf(outPtr, "0x%08lx: %08lx\n", i, word);
+    uint32_t ith_word_memory = fetch32(i);
+    
+    // Only output if not 0
+    if (ith_word_memory) {
+      fprintf(outPtr, "0x%08lx: %08lx\n", i, ith_word_memory);
     }
   }
 }
