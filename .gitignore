@@ -33,3 +33,8 @@ assemble
 *.nav
 *.toc
 
+#ignore cbuild files, temp testing files, .idea files
+*.cbuild
+*.bin
+*.xml
+
