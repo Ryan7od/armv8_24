@@ -10,7 +10,11 @@
 #include "loadstore.h"
 
 //Prototype functions
-static void printEnd(FILE *ptr);
+static void outputFinalState(FILE *outPtr);
+static void outputRegisters(FILE *outPtr);
+static void outputPC(FILE *outPtr);
+static void outputPState(FILE *outPtr);
+static void outputMemory(FILE *outPtr);
 
 unsigned char memory[MB2] = { 0 };
 Register gRegisters[31] = { 0 };
@@ -90,7 +94,7 @@ int main(int argc, char **argv) {
     instruction = fetch32(sRegisters.PC);
   }
 
-  printEnd(outPtr);
+  outputFinalState(outPtr);
   //fcloseall();
   return EXIT_SUCCESS;
 }
@@ -98,28 +102,48 @@ int main(int argc, char **argv) {
 
 
 //Prints out final state
-static void printEnd(FILE *ptr) {
-  //Output 31 general registers
-  for (int i = 0; i < 31; i++) {
-    if (i < 10) fprintf(ptr, "X0%i = %016llx\n", i, read64(&gRegisters[i]));
-    else fprintf(ptr, "X%i = %016llx\n", i, read64(&gRegisters[i]));
-  }
+static void outputFinalState(FILE *outPtr) {
+  
+  outputRegisters(outPtr);
 
-  // Output Program Counter
-  fprintf(ptr, "PC  = %016llx\n", read64(&sRegisters.PC));
-  
-  // Output PSTATE
-  fprintf(ptr, "PSTATE: ");
-  fprintf(ptr, (sRegisters.pstate.N ? "N" : "-"));
-  if(sRegisters.pstate.Z) fprintf(ptr, "Z"); else fprintf(ptr, "-");
-  if(sRegisters.pstate.C) fprintf(ptr, "C"); else fprintf(ptr, "-");
-  if(sRegisters.pstate.V) fprintf(ptr, "V\n"); else fprintf(ptr, "-\n");
-  
-  // Output
+  outputPC(outPtr);
+
+  outputPState(outPtr);
+
+  outputMemory(outPtr);
+
+}
+
+//Output 31 general registers
+static void outputRegisters(FILE *outPtr) {
+  for (int i = 0; i < 31; i++) {
+    if (i < 10) fprintf(outPtr, "X0%i = %016llx\n", i, read64(&gRegisters[i]));
+    else fprintf(outPtr, "X%i = %016llx\n", i, read64(&gRegisters[i]));
+  }
+}
+
+//Output Program Counter
+static void outputPC(FILE *outPtr) {
+  fprintf(outPtr, "PC  = %016llx\n", read64(&sRegisters.PC));
+}
+
+// Output PSTATE
+static void outputPState(FILE *outPtr) {
+  fprintf(outPtr, "PSTATE: ");
+  fprintf(outPtr, (sRegisters.pstate.N ? "N" : "-"));
+  if(sRegisters.pstate.Z) fprintf(outPtr, "Z"); else fprintf(outPtr, "-");
+  if(sRegisters.pstate.C) fprintf(outPtr, "C"); else fprintf(outPtr, "-");
+  if(sRegisters.pstate.V) fprintf(outPtr, "V\n"); else fprintf(outPtr, "-\n");
+}
+
+//Outputs memory
+static void outputMemory(FILE *outPtr) {
   for (int i = 0; i < MB2; i += 4) {
     uint32_t word = fetch32(i);
     if (word) {
-      fprintf(ptr, "0x%08lx: %08lx\n", i, word);
+      fprintf(outPtr, "0x%08lx: %08lx\n", i, word);
     }
   }
 }
+
+
