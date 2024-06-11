@@ -11,6 +11,10 @@
 
 //Prototype functions
 
+static FILE* getOutputPtr( int argc, char **argv );
+static void putBinFileToMemory( int argc, char **argv );
+static void emulate( void );
+
 static void outputFinalState( FILE *outPtr );
 static void outputRegisters( FILE *outPtr );
 static void outputPC( FILE *outPtr );
@@ -27,8 +31,10 @@ int main(int argc, char **argv) {
   if (argc != 3 && argc != 2) {
     ERROR_A("Incorrect number of arguments: %d", (argc - 1));
   }
+  
+  char * binaryFileName = argv[1];
 
-  //Set output method
+  //Set output method MOVE TO OUTPUT
   FILE *outPtr = stdout;
   if (argc > 2) {
     outPtr = fopen(argv[2], "w");
@@ -39,7 +45,7 @@ int main(int argc, char **argv) {
 
   //Read in file
   FILE *inPtr;
-  inPtr = fopen(argv[1], "rb");
+  inPtr = fopen(binaryFileName, "rb");
   unsigned char buffer[4] = { 0 };
   unsigned char* memPtr = memory;
   if (inPtr == NULL) {
@@ -50,6 +56,7 @@ int main(int argc, char **argv) {
       *memPtr++ = buffer[i];
     }
   }
+  fclose(inPtr);
   
   //Run through each step
   uint32_t instruction = fetch32(sRegisters.PC);
@@ -94,10 +101,22 @@ int main(int argc, char **argv) {
     }
     instruction = fetch32(sRegisters.PC);
   }
-
+  
   outputFinalState(outPtr);
-  fcloseall();
+  fclose(outPtr);
   return EXIT_SUCCESS;
+}
+
+static FILE* getOutputPtr( int argc, char **argv ) {
+
+}
+
+static void putBinFileToMemory( int argc, char **argv ) {
+
+}
+
+static void emulate( void ) {
+
 }
 
 
