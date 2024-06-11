@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
   emulate();
   
   printFinalState(argc, argv);
+
   return EXIT_SUCCESS;
 }
 
@@ -107,8 +108,6 @@ static void emulate( void ) {
   }
 }
 
-
-
 //Prints out final state
 static void printFinalState(int argc, char **argv) {
   
@@ -122,7 +121,9 @@ static void printFinalState(int argc, char **argv) {
 
   printNonZeroMem(outPtr);
 
-  fclose(outPtr);
+  if (argc == 2) {
+    fclose(outPtr);
+  }
 }
 
 static FILE* getOutputPtr( int argc, char **argv ) {
@@ -146,7 +147,6 @@ static void printRegisters(FILE *outPtr) {
     } else {
       fprintf(outPtr, "X%d = %016llx\n", i, (unsigned long long)read64(&gRegisters[i]));
     }
-    
   }
 }
 
@@ -178,5 +178,3 @@ static void printNonZeroMem(FILE *outPtr) {
     }
   }
 }
-
-
