@@ -73,24 +73,10 @@ char* DataProcessingInstruction(InstructionIR instruction);
 // Function pointer type for instruction parsers
 
 
-// Function declarations
-void parseBranch(InstructionIR instruction, FILE *file);
-void parseLoadStore(InstructionIR instruction, FILE *file);
-void parseDataProcessing(InstructionIR instruction, FILE *file);
+
 static uint32_t getSf(char *reg);
 
-// Parsing functions
-void parseBranch(InstructionIR instruction, FILE *file) {
-    printf("x");
-}
 
-void parseLoadStore(InstructionIR instruction, FILE *file) {
-    printf("x");
-}
-
-void parseDataProcessing(InstructionIR instruction, FILE *file) {
-    printf("x");
-}
 
 static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], size_t size);
 void freeTable(dynarray symbolTable);
@@ -99,9 +85,8 @@ static void parseTwoOperand(InstructionIR instruction, FILE *file);
 static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
 static uint32_t getReg(char *reg);
-static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static void parseLoadStoreInstructions(InstructionIR instruction, FILE *file, BranchMapping branchMapping[], size_t opcode_map_size);
-static void parseBranchInstructions(InstructionIR instruction, FILE *file, BranchMapping branchMapping[], size_t opcode_map_size);
+static void parseLoadStoreInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size);
+static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size);
 static void parseMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
 void printBinary(uint32_t value) {
@@ -115,41 +100,41 @@ void printBinary(uint32_t value) {
 }
 
 
-static void parseArtihmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 bool firstPassFlag = true;
 InstructionMapping mappings[] = {
-        {"b", parseBranch},
-        {"b.cond", parseBranch},
-        {"br", parseBranch},
-        {"str", parseLoadStore},
-        {"ldr", parseLoadStore},
-        {"add", parseArtihmetic},
-        {"adds", parseDataProcessing},
-        {"sub", parseDataProcessing},
-        {"subs", parseDataProcessing},
-        {"cmp", parseDataProcessing},
-        {"cmn", parseDataProcessing},
-        {"neg", parseDataProcessing},
-        {"negs", parseDataProcessing},
-        {"and", parseDataProcessing},
-        {"ands", parseDataProcessing},
-        {"bic", parseDataProcessing},
-        {"bics", parseDataProcessing},
-        {"eor", parseDataProcessing},
-        {"orr", parseDataProcessing},
-        {"eon", parseDataProcessing},
-        {"orn", parseDataProcessing},
-        {"tst", parseDataProcessing},
-        {"movk", parseDataProcessing},
-        {"movn", parseDataProcessing},
-        {"movz", parseDataProcessing},
-        {"mov", parseDataProcessing},
-        {"mvn", parseDataProcessing},
-        {"madd", parseDataProcessing},
-        {"msub", parseDataProcessing},
-        {"mul", parseDataProcessing},
-        {"mneg", parseDataProcessing},
+        {"b",      parseBranchInstructions},
+        {"b.cond", parseBranchInstructions},
+        {"br",     parseBranchInstructions},
+        {"str",    parseLoadStoreInstructions},
+        {"ldr",    parseLoadStoreInstructions},
+        {"add",    parseArithmetic},
+        {"adds",   parseArithmetic},
+        {"sub",    parseArithmetic},
+        {"subs",   parseArithmetic},
+        {"cmp",    parseArithmetic},
+        {"cmn",    parseArithmetic},
+        {"neg",    parseArithmetic},
+        {"negs",   parseArithmetic},
+        {"and",    parseLogic},
+        {"ands",   parseLogic},
+        {"bic",    parseLogic},
+        {"bics", parseLogic},
+        {"eor", parseLogic},
+        {"orr", parseLogic},
+        {"eon", parseLogic},
+        {"orn", parseLogic},
+        {"tst", parseLogic},
+        {"movk", parseWideMove},
+        {"movn", parseWideMove},
+        {"movz", parseWideMove},
+        {"mov", parseLogic},
+        {"mvn", parseLogic},
+        {"madd", parseMultiply},
+        {"msub", parseMultiply},
+        {"mul", parseMultiply},
+        {"mneg", parseMultiply},
         // Add more mappings as needed
 };
 size_t mappingCount = sizeof(mappings) / sizeof(mappings[0]);
@@ -175,6 +160,16 @@ OpcodeMapping opcodeMapping[] = {
         {"bics", 3<<29}
 };
 
+BranchMapping branchMapping[] = {
+        {"eq", 0},
+        {"ne", 1},
+        {"ge", 10},
+        {"lt", 11},
+        {"gt", 12},
+        {"le", 13},
+        {"al", 14}
+};
+
 size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -197,15 +192,6 @@ int main(int argc, char **argv) {
     }
 
 
-    BranchMapping branchMapping[] = {
-            {"eq", 0},
-            {"ne", 1},
-            {"ge", 10},
-            {"lt", 11},
-            {"gt", 12},
-            {"le", 13},
-            {"al", 14}
-    };
 
 
     char *inputFile = argv[0];
@@ -237,7 +223,7 @@ int main(int argc, char **argv) {
     instruction2.operand[1] = "w0";
     instruction2.operand[2] = "#0x5a0";
     instruction2.operand[3] = "lsl #12";
-    parseArtihmetic(instruction2, binaryCode, opcodeMapping, opcode_msize);
+    parseArithmetic(instruction2, binaryCode, opcodeMapping, opcode_msize);
 
     InstructionIR instruction3;
     instruction3.opcode = "br";
@@ -356,9 +342,9 @@ InstructionIR parser(char *line) {
 
 
 
-static InstructionParser functionClassifier(InstructionIR instruction, InstructionMapping* mappings, size_t mapSize) {
+static InstructionParser functionClassifier(InstructionIR instruction, InstructionMapping* mapping, size_t mapSize) {
     for (size_t i = 0; i < mapSize; i++) {
-        if (strcmp(instruction.opcode, mappings[i].mnemonic) == 0) { return  mappings[i].parser; }
+        if (strcmp(instruction.opcode, mappings[i].mnemonic) == 0) { return  mapping[i].parser; }
     }
     return NULL;
 }
@@ -418,7 +404,7 @@ static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMappi
     fclose(file);
 
 }
-static uint32_t getEncoding(const char* mnemonic, BranchMapping branchMapping[]) {
+static uint32_t getEncoding(const char* mnemonic) {
     for (int i = 0; i < BranchMappingSize; i++) {
         if (strcmp(branchMapping[i].mnemonic, mnemonic) == 0) {
             return branchMapping[i].encoding;
@@ -427,7 +413,8 @@ static uint32_t getEncoding(const char* mnemonic, BranchMapping branchMapping[])
     exit(1);
 }
 
-static void parseBranchInstructions(InstructionIR instruction, FILE *file, BranchMapping branchMapping[], size_t opcode_map_size) {
+static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
+    FILE *file = fopen(output, "wb");
     uint32_t bStart = 5 << 26;
     uint32_t brStart = 54815 << 16;
     uint32_t bCStart = 21 << 26;
@@ -450,7 +437,7 @@ static void parseBranchInstructions(InstructionIR instruction, FILE *file, Branc
         if (suffix != NULL) {
             strcpy(suffix, &instruction.opcode[2]); // Copy the substring starting from the third character
         }
-        uint32_t cond = getEncoding(suffix, branchMapping);
+        uint32_t cond = getEncoding(suffix);
         uint32_t finalVal = bCStart | cond;
     }
 }
@@ -480,7 +467,8 @@ char** allocateRegisters(InstructionIR instruction) {
 
 // single data transfer is str or ldr
 // load literal just ldr
-static void parseLoadStoreInstructions(InstructionIR instruction, FILE *file, BranchMapping branchMapping[], size_t opcode_map_size) {
+static void parseLoadStoreInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
+    FILE *file = fopen(output, "wb");
     int rtNumber;
     char *endptr;
     uint32_t sf;
