@@ -37,7 +37,7 @@ typedef struct {
     uint32_t opcode_bin;
 } OpcodeMapping;
 
-typedef void (*InstructionParser)(InstructionIR, FILE *);
+typedef void (*InstructionParser)(InstructionIR, char *, OpcodeMapping [], size_t);
 static uint32_t getN(const char *opcode);
 uint32_t data_processing_immediate_code = 1 << 28;
 uint32_t data_processing_register_code = 5 << 25;
@@ -53,14 +53,14 @@ struct SA_pair createSA(char *label, int lineNo);
 
 
 
-
+void fileProcessor(char *inputfile, char *outputfile);
 void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol);
 static void writeToFile(uint32_t write_val, FILE *file);
-static void parseLogic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
 
 
-static void parser(char *line);
+InstructionIR parser(char *line);
 char* DataProcessingInstruction(InstructionIR instruction);
 
 // Function pointer type for instruction parsers
@@ -86,110 +86,102 @@ void parseDataProcessing(InstructionIR instruction, FILE *file) {
 }
 
 static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], size_t size);
+void freeTable(dynarray symbolTable);
 
 static void parseTwoOperand(InstructionIR instruction, FILE *file);
-static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
 static uint32_t getReg(char *reg);
-static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+static void parseArtihmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 bool firstPassFlag = true;
+InstructionMapping mappings[] = {
+        {"b", parseBranch},
+        {"b.cond", parseBranch},
+        {"br", parseBranch},
+        {"str", parseLoadStore},
+        {"ldr", parseLoadStore},
+        {"add", parseArtihmetic},
+        {"adds", parseDataProcessing},
+        {"sub", parseDataProcessing},
+        {"subs", parseDataProcessing},
+        {"cmp", parseDataProcessing},
+        {"cmn", parseDataProcessing},
+        {"neg", parseDataProcessing},
+        {"negs", parseDataProcessing},
+        {"and", parseDataProcessing},
+        {"ands", parseDataProcessing},
+        {"bic", parseDataProcessing},
+        {"bics", parseDataProcessing},
+        {"eor", parseDataProcessing},
+        {"orr", parseDataProcessing},
+        {"eon", parseDataProcessing},
+        {"orn", parseDataProcessing},
+        {"tst", parseDataProcessing},
+        {"movk", parseDataProcessing},
+        {"movn", parseDataProcessing},
+        {"movz", parseDataProcessing},
+        {"mov", parseDataProcessing},
+        {"mvn", parseDataProcessing},
+        {"madd", parseDataProcessing},
+        {"msub", parseDataProcessing},
+        {"mul", parseDataProcessing},
+        {"mneg", parseDataProcessing},
+        // Add more mappings as needed
+};
+size_t mappingCount = sizeof(mappings) / sizeof(mappings[0]);
 dynarray SymbolTable;
+
+OpcodeMapping opcodeMapping[] = {
+        {"add", 0},
+        {"adds", 1 << 29},
+        {"sub", 1 << 30},
+        {"subs", 3 << 29},
+        {"movn", 0 },
+        {"movz", 1<<30},
+        {"movk", 3<<29},
+        {"madd", 0},
+        {"msub", 0},
+        {"and", 0},
+        {"bic", 0},
+        {"orr", 1<<29},
+        {"orn", 1<<29},
+        {"eor", 1<<30},
+        {"eon", 1<<30},
+        {"ands", 3<<29},
+        {"bics", 3<<29}
+};
+
+size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
 int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "incorrect number of arguments inputted");
+        return 2;
+    }
 
     SymbolTable = malloc(sizeof(struct dynarray));
     if (SymbolTable == NULL) {
-        perror("memory allocation failed");
-        exit(1);
+        fprintf(stderr, "memory allocation failed");
+        return 1;
     }
     SymbolTable->numItems = 0;
     SymbolTable->size = SymbolTableSize;
     SymbolTable->data = malloc(SymbolTable->size * sizeof(struct SA_pair));
     if (SymbolTable->data == NULL) {
         free(SymbolTable);
-        perror("memory allocation failed");
-        exit(1);
+        fprintf(stderr, "memory allocation failed");
+        return 1;
     }
 
-    OpcodeMapping opcodeMapping[] = {
-            {"add", 0},
-            {"adds", 1 << 29},
-            {"sub", 1 << 30},
-            {"subs", 3 << 29},
-            {"movn", 0 },
-            {"movz", 1<<30},
-            {"movk", 3<<29},
-            {"madd", 0},
-            {"msub", 0},
-            {"and", 0},
-            {"bic", 0},
-            {"orr", 1<<29},
-            {"orn", 1<<29},
-            {"eor", 1<<30},
-            {"eon", 1<<30},
-            {"ands", 3<<29},
-            {"bics", 3<<29}
-    };
 
-    size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
+    char *inputFile = argv[0];
+    char *outputFile = argv[1];
+    fileProcessor(inputFile, outputFile); //Pass 1
+    firstPassFlag = false;
+    fileProcessor(inputFile, outputFile); //Pass 2
 
-    // Create an array of instruction mappings
-    InstructionMapping mappings[] = {
-            {"b", parseBranch},
-            {"b.cond", parseBranch},
-            {"br", parseBranch},
-            {"str", parseLoadStore},
-            {"ldr", parseLoadStore},
-            {"add", parseDataProcessing},
-            {"adds", parseDataProcessing},
-            {"sub", parseDataProcessing},
-            {"subs", parseDataProcessing},
-            {"cmp", parseDataProcessing},
-            {"cmn", parseDataProcessing},
-            {"neg", parseDataProcessing},
-            {"negs", parseDataProcessing},
-            {"and", parseDataProcessing},
-            {"ands", parseDataProcessing},
-            {"bic", parseDataProcessing},
-            {"bics", parseDataProcessing},
-            {"eor", parseDataProcessing},
-            {"orr", parseDataProcessing},
-            {"eon", parseDataProcessing},
-            {"orn", parseDataProcessing},
-            {"tst", parseDataProcessing},
-            {"movk", parseDataProcessing},
-            {"movn", parseDataProcessing},
-            {"movz", parseDataProcessing},
-            {"mov", parseDataProcessing},
-            {"mvn", parseDataProcessing},
-            {"madd", parseDataProcessing},
-            {"msub", parseDataProcessing},
-            {"mul", parseDataProcessing},
-            {"mneg", parseDataProcessing},
-            // Add more mappings as needed
-    };
+    freeTable(SymbolTable);
 
-    size_t mappingCount = sizeof(mappings) / sizeof(mappings[0]);
-
-    // Example instruction mnemonics
-    InstructionIR instruction1;
-    instruction1.opcode = "mvn";
-    instruction1.operand[0] = "x5";
-    instruction1.operand[1] = "x6";
-
-
-    FILE *binaryCode = fopen("code.bin", "wb");
-    if (binaryCode == NULL) {
-        fprintf(binaryCode, "file unable to open");
-        return EXIT_FAILURE;
-    }
-    InstructionIR instruction2;
-    instruction2.opcode = "and";
-    instruction2.operand[0] = "x7";
-    instruction2.operand[1] = "x18";
-    instruction2.operand[2] = "x12";
-    parseLogic(instruction2, binaryCode, opcodeMapping, opcode_msize);
-    fclose(binaryCode);
    return EXIT_SUCCESS;
 };
 
@@ -222,9 +214,9 @@ void freeTable(dynarray symbolTable) {
 }
 
 
-void fileProcessor(const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
+void fileProcessor(char *inputfile, char *outputfile) {
+    FILE *input = fopen(inputfile, "r");
+    if (input == NULL) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
@@ -234,58 +226,60 @@ void fileProcessor(const char *filename) {
     ssize_t read;
     int lineNo = -1;
 
-    while ((read = getline(&line, &len, file)) != -1) {
+    while ((read = getline(&line, &len, input)) != -1) {
         // Remove trailing newline character
         if (line[read - 1] == '\n') {
             line[read - 1] = '\0';
         }
-        if (!firstPassFlag) {
-            parser(line);
-        } else {
-            if (isalpha(*line) && line[read - 2] == ':') {
+        if (isalpha(*line) && line[read - 2] == ':') {
+            if (firstPassFlag) {
                 struct SA_pair pair = createSA(line, lineNo);
                 addToTable(SymbolTable, pair);
-            } else {
-                lineNo++;
             }
+        } else {
+            if (!firstPassFlag) {
+                InstructionIR instruction = parser(line);
+                InstructionParser parser = functionClassifier(instruction, mappings, mappingCount);
+                (*parser)(instruction, outputfile, opcodeMapping, opcode_msize);
+            }
+            lineNo++;
         }
     }
     free(line);
-    fclose(file);
+    fclose(input);
 }
 
 
 
-void tokenizer(char instruction[]) {
+static InstructionIR tokenizer(char instruction[]) {
     char* mne = strtok(instruction, " ");
     char* ops = strtok(NULL, " ");
     printf("%s\n", mne);
     printf("%s\n", ops);
     char* operand;
     char* operands[4];
+    InstructionIR new_instruction;
     int operand_count = 0;
     operand = strtok(ops, ",");
+    new_instruction.opcode = mne;
     while (operand != NULL && operand_count < 4) {
         operands[operand_count++] = operand;
         operand = strtok(NULL, ",");
     }
     // Print the operands
     for (int i = 0; i < operand_count; i++) {
+        new_instruction.operand[i] = operands[i];
         printf("Operand %d: %s\n", i + 1, operands[i]);
     }
+    return new_instruction;
 }
 
 
-static void parser(char *line) {
+InstructionIR parser(char *line) {
     if (*line == '.') {
         printf("d");
     } else {
-        int length = strlen(line);
-        if (line[length - 1] == ':' && isalpha(*line)) {
-            return;
-        } else {
-            tokenizer(line);
-        }
+        return tokenizer(line);
     }
 }
 
@@ -308,10 +302,12 @@ static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], 
     exit(1);
 }
 
-static void parseArithmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    FILE *file = fopen(output, "wb");
     uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
     uint32_t opi = 1 << 24;
     uint32_t sf = getSf(instruction.operand[0]);
+    // If statement checks whether instruction is immediate or register
     if (*instruction.operand[2] == '#') {
         char *startptr = instruction.operand[2] + 1;
         printf("%s\n", startptr);
@@ -350,10 +346,12 @@ static void parseArithmetic(InstructionIR instruction, FILE *file, OpcodeMapping
         writeToFile(write_val, file);
         printf("%u", write_val);
     }
+    fclose(file);
 
 }
 
-static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    FILE *file = fopen(output, "wb");
     uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
     uint32_t opi = 5 << 23;
     uint32_t rd = getReg(instruction.operand[0]);
@@ -373,10 +371,12 @@ static void parseWideMove(InstructionIR instruction, FILE *file, OpcodeMapping o
         exit(1);
     }
     printf("%u", write_val);
+    fclose(file);
 }
 
 
-static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    FILE *file = fopen(output, "wb");
     uint32_t m = 1 << 28;
     uint32_t opr = 1 << 24;
     uint32_t opcode_binary = getOpcode(instruction, opcodeMapping, opcode_map_size);
@@ -391,6 +391,7 @@ static void parseMultiply(InstructionIR instruction, FILE *file, OpcodeMapping o
     }
     uint32_t write_val = sf | opcode_binary | m | data_processing_register_code | opr | rm | x | ra | rn | rd;
     writeToFile(write_val, file);
+    fclose(file);
 }
 
 static uint32_t getReg(char *reg) {
@@ -417,7 +418,8 @@ static void writeToFile(uint32_t write_val, FILE *file) {
     }
 }
 
-static void parseLogic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    FILE *file = fopen(output, "wb");
     uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
     uint32_t sf = getSf(instruction.operand[0]);
     uint32_t M = 0;
@@ -444,6 +446,7 @@ static void parseLogic(InstructionIR instruction, FILE *file, OpcodeMapping opco
     uint32_t write_val = sf | opcode_bin | M | data_processing_register_code | N | opr | rm | operand | rn | rd;
     writeToFile(write_val, file);
     printf("%u", write_val);
+    fclose(file);
 }
 
 static uint32_t getN(const char *opcode) {
