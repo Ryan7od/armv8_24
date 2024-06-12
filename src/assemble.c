@@ -27,6 +27,7 @@ typedef struct dynarray *dynarray;
 typedef enum {instruction, directive, label} LineType;
 
 #define MAX_OPERANDS 4
+#define BranchMappingSize 7
 typedef struct {
     char *opcode;
     char *operand[MAX_OPERANDS];
@@ -37,8 +38,15 @@ typedef struct {
     uint32_t opcode_bin;
 } OpcodeMapping;
 
+
+typedef struct {
+    const char* mnemonic;
+    uint32_t encoding;
+} BranchMapping;
+
 typedef void (*InstructionParser)(InstructionIR, char *, OpcodeMapping [], size_t);
 static uint32_t getN(const char *opcode);
+
 uint32_t data_processing_immediate_code = 1 << 28;
 uint32_t data_processing_register_code = 5 << 25;
 
@@ -92,6 +100,22 @@ static void parseTwoOperand(InstructionIR instruction, FILE *file);
 static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
 static uint32_t getReg(char *reg);
+static void parseArtihmetic(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+static void parseLoadStoreInstructions(InstructionIR instruction, FILE *file, BranchMapping branchMapping[], size_t opcode_map_size);
+static void parseBranchInstructions(InstructionIR instruction, FILE *file, BranchMapping branchMapping[], size_t opcode_map_size);
+static void parseMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+
+void printBinary(uint32_t value) {
+    for (int i = 31; i >= 0; i--) {
+        putchar((value & (1 << i)) ? '1' : '0');
+        if (i % 4 == 0) {  // Optional: add a space every 4 bits for readability
+            putchar(' ');
+        }
+    }
+    putchar('\n');
+}
+
+
 static void parseArtihmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 bool firstPassFlag = true;
@@ -174,6 +198,17 @@ int main(int argc, char **argv) {
     }
 
 
+    BranchMapping branchMapping[] = {
+            {"eq", 0},
+            {"ne", 1},
+            {"ge", 10},
+            {"lt", 11},
+            {"gt", 12},
+            {"le", 13},
+            {"al", 14}
+    };
+
+
     char *inputFile = argv[0];
     char *outputFile = argv[1];
     fileProcessor(inputFile, outputFile); //Pass 1
@@ -181,6 +216,41 @@ int main(int argc, char **argv) {
     fileProcessor(inputFile, outputFile); //Pass 2
 
     freeTable(SymbolTable);
+
+
+    
+
+    // Example instruction mnemonics
+    InstructionIR instruction1;
+    instruction1.opcode = "mvn";
+    instruction1.operand[0] = "x5";
+    instruction1.operand[1] = "x6";
+
+
+    FILE *binaryCode = fopen("code.bin", "wb");
+    if (binaryCode == NULL) {
+        fprintf(binaryCode, "file unable to open");
+        return EXIT_FAILURE;
+    }
+    InstructionIR instruction2;
+    instruction2.opcode = "sub";
+    instruction2.operand[0] = "w15";
+    instruction2.operand[1] = "w0";
+    instruction2.operand[2] = "#0x5a0";
+    instruction2.operand[3] = "lsl #12";
+    parseArtihmetic(instruction2, binaryCode, opcodeMapping, opcode_msize);
+
+    InstructionIR instruction3;
+    instruction3.opcode = "br";
+    instruction3.operand[0] = "x15";
+    parseBranchInstructions(instruction3, binaryCode, branchMapping, opcode_msize);
+
+    InstructionIR instruction4;
+    instruction4.opcode = "ldr";
+    instruction4.operand[0] = "x15";
+    instruction4.operand[1] = "[x3, x17]";
+    parseLoadStoreInstructions(instruction4, binaryCode, branchMapping, opcode_msize);
+    fclose(binaryCode);
 
    return EXIT_SUCCESS;
 };
@@ -349,6 +419,136 @@ static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMappi
     fclose(file);
 
 }
+static uint32_t getEncoding(const char* mnemonic, BranchMapping branchMapping[]) {
+    for (int i = 0; i < BranchMappingSize; i++) {
+        if (strcmp(branchMapping[i].mnemonic, mnemonic) == 0) {
+            return branchMapping[i].encoding;
+        }
+    }
+    exit(1);
+}
+
+static void parseBranchInstructions(InstructionIR instruction, FILE *file, BranchMapping branchMapping[], size_t opcode_map_size) {
+    uint32_t bStart = 5 << 26;
+    uint32_t brStart = 54815 << 16;
+    uint32_t bCStart = 21 << 26;
+    if (strcmp(instruction.opcode, "br") == 0) {
+        int regNumber;
+        char *endptr;
+        regNumber = strtol(&instruction.operand[0][1], &endptr, 10);
+        if (*endptr != '\0') {
+            printf("Conversion error occurred\n");
+        }
+//        printf((const char *) regNumber);
+        uint32_t regBin = regNumber << 5;
+        uint32_t finalVal = brStart | regBin;
+        printf("\nfinal val in binary:\n");
+        printBinary(finalVal);
+        printf("final val in hex: 0x%08X\n", finalVal);
+    } else if (instruction.opcode[1] == '.') {
+        size_t length = strlen(instruction.opcode) - 2; // Subtracting 2 for 'b.' prefix
+        char *suffix = (char*)malloc(length + 1); // +1 for the null terminator
+        if (suffix != NULL) {
+            strcpy(suffix, &instruction.opcode[2]); // Copy the substring starting from the third character
+        }
+        uint32_t cond = getEncoding(suffix, branchMapping);
+        uint32_t finalVal = bCStart | cond;
+    }
+}
+
+char** allocateRegisters(InstructionIR instruction) {
+    char** registers = malloc(2 * sizeof(char*));
+    if (registers == NULL) {
+        printf("Memory allocation failed\n");
+        exit(1);
+    }
+
+    // Initialize both pointers to NULL
+    registers[0] = NULL;
+    registers[1] = NULL;
+
+    // Parse the instruction to extract register(s)
+    char* token = strtok(instruction.operand[1], ", []!");
+    if (token != NULL) {
+        registers[0] = strdup(token); // Allocate memory and copy the string
+        token = strtok(NULL, ", []"); // Move to the next token
+        if (token != NULL) {
+            registers[1] = strdup(token); // Allocate memory and copy the string
+        }
+    }
+    return registers;
+}
+
+// single data transfer is str or ldr
+// load literal just ldr
+static void parseLoadStoreInstructions(InstructionIR instruction, FILE *file, BranchMapping branchMapping[], size_t opcode_map_size) {
+    int rtNumber;
+    char *endptr;
+    uint32_t sf;
+    rtNumber = strtol(&instruction.operand[0][1], &endptr, 10);
+    if (*endptr != '\0') {
+        printf("Conversion error occurred\n");
+    }
+    uint32_t rt = rtNumber;
+    if (instruction.operand[0][0] == 'w') {
+        uint32_t sf = 0;
+    } else {
+        uint32_t sf = 1 << 30;
+    }
+    if (instruction.operand[1][0] == '[') {
+        uint32_t l;
+        int length = strlen(instruction.operand[1]);
+        uint32_t firstBit = 1 << 31;
+        uint32_t otherBits = 7 << 27;
+        if (instruction.opcode[0] == 'l') {
+            uint32_t l = 1 << 22;
+        } else {
+            uint32_t l = 0 << 22;
+        }
+        int xnNumber;
+        char *endptr2;
+        char** memoryRegisters = allocateRegisters(instruction);
+        xnNumber = strtol(memoryRegisters[0], &endptr2, 10);
+        if (*endptr2 != '\0') {
+            printf("Conversion error occurred\n");
+        }
+        uint32_t xn = xnNumber << 5;
+        if (instruction.operand[1][length -1] == '!') {
+            uint32_t u = 0;
+            uint32_t i = 1 << 11;
+            uint32_t endRegBit = 1 << 10;
+        } else if (instruction.operand[2] != NULL){
+            uint32_t u = 0;
+            uint32_t endRegBit = 1 << 10;
+        } else if (memoryRegisters[1] != NULL && memoryRegisters[1][0] == 'x') {
+            uint32_t u = 0;
+            uint32_t firstRegBit = 1 << 21;
+            uint32_t regOtherBits = 13 << 11;
+            int xmNumber;
+            char *endptr3;
+            xmNumber = strtol(memoryRegisters[1], &endptr3, 10);
+            if (*endptr3 != '\0') {
+                printf("Conversion error occurred\n");
+            }
+            uint32_t xm = xmNumber << 16;
+            uint32_t finalVal = firstBit | sf | otherBits | u | l | firstRegBit | xm | regOtherBits | xn | rt;
+            printf("\nfinal val 2 in binary:\n");
+            printBinary(finalVal);
+            printf("final val 2 in hex: 0x%08X\n", finalVal);
+        } else {
+            uint32_t u = 1 << 24;
+        }
+        free(memoryRegisters);
+
+    } else {
+        uint32_t firstBit = 0 << 31;
+        uint32_t otherBits = 3 << 27;
+        //when its ldr <literal> so either label or #N
+    }
+
+
+}
+
 
 static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "wb");
@@ -375,6 +575,7 @@ static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping
 }
 
 
+
 static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "wb");
     uint32_t m = 1 << 28;
@@ -392,6 +593,7 @@ static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping
     uint32_t write_val = sf | opcode_binary | m | data_processing_register_code | opr | rm | x | ra | rn | rd;
     writeToFile(write_val, file);
     fclose(file);
+
 }
 
 static uint32_t getReg(char *reg) {
