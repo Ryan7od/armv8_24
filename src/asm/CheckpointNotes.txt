@@ -1,0 +1,59 @@
+Notes for Interim Checkpoint
+
+Made 12/6/24 by Group 24
+
+
+### REPORT ###
+
+1. Is the report longer than 2xA4
+No.
+
+2. Is the report written in latex?
+Yes.
+
+3. Division of Group Work.
+Max & Ryan worked on and finished part 1.
+Aizere & Veer worked on and finihsed part 2.
+We are planning to collaborate on part 3 & 4.
+
+4. Group discussion.
+???
+
+5. Emulator structure.
+Demonstration.
+
+6. Implementation discussion.
+???
+
+### REPO ###
+
+1. Are there any commits in the group repo?
+Yes; 115 so far. 
+git rev-list --count HEAD
+
+2. Do commits have appropriate commit messages?
+Yes.
+
+3. Does the code contain useful and relevent comments?
+Yes, thorough.
+
+4. Using makefiles, or manual commands?
+We are using cb for both parts 1 and 2
+
+5. Is the main branch free of any unneeded files?
+Yes.
+
+### INTERVIEW ###
+
+1. Did all the group members show for the onsite meeting?
+Yes
+
+2. Is the group able to clone the TestServer and run it?
+Yes.
+
+3. How many of the 594 mandatory Emulator tests are passing?
+594/594
+
+4. How are the group members communicating?
+In person via group meetings and pair programming sessions.
+Online via call, text, groupchat and email.
