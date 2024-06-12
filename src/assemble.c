@@ -15,7 +15,6 @@ struct SA_pair {
     int address;
 };
 
-
 struct dynarray {
     struct SA_pair *data;
     int numItems;
