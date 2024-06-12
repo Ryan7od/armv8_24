@@ -172,8 +172,8 @@ BranchMapping branchMapping[] = {
 
 size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
 int main(int argc, char **argv) {
-    if (argc != 2) {
-        fprintf(stderr, "incorrect number of arguments inputted");
+    if (argc != 3) {
+        fprintf(stderr, "incorrect number of arguments inputted\n");
         return 2;
     }
 
@@ -194,48 +194,13 @@ int main(int argc, char **argv) {
 
 
 
-    char *inputFile = argv[0];
-    char *outputFile = argv[1];
+    char *inputFile = argv[1];
+    char *outputFile = argv[2];
     fileProcessor(inputFile, outputFile); //Pass 1
     firstPassFlag = false;
     fileProcessor(inputFile, outputFile); //Pass 2
 
     freeTable(SymbolTable);
-
-
-    
-
-    // Example instruction mnemonics
-    InstructionIR instruction1;
-    instruction1.opcode = "mvn";
-    instruction1.operand[0] = "x5";
-    instruction1.operand[1] = "x6";
-
-
-    FILE *binaryCode = fopen("code.bin", "wb");
-    if (binaryCode == NULL) {
-        fprintf(binaryCode, "file unable to open");
-        return EXIT_FAILURE;
-    }
-    InstructionIR instruction2;
-    instruction2.opcode = "sub";
-    instruction2.operand[0] = "w15";
-    instruction2.operand[1] = "w0";
-    instruction2.operand[2] = "#0x5a0";
-    instruction2.operand[3] = "lsl #12";
-    parseArithmetic(instruction2, binaryCode, opcodeMapping, opcode_msize);
-
-    InstructionIR instruction3;
-    instruction3.opcode = "br";
-    instruction3.operand[0] = "x15";
-    parseBranchInstructions(instruction3, binaryCode, branchMapping, opcode_msize);
-
-    InstructionIR instruction4;
-    instruction4.opcode = "ldr";
-    instruction4.operand[0] = "x15";
-    instruction4.operand[1] = "[x3, x17]";
-    parseLoadStoreInstructions(instruction4, binaryCode, branchMapping, opcode_msize);
-    fclose(binaryCode);
 
    return EXIT_SUCCESS;
 };
