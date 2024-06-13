@@ -234,7 +234,7 @@ void freeTable(dynarray symbolTable) {
     free(symbolTable);
 }
 
-
+int lineNo = -1;
 void fileProcessor(char *inputfile, char *outputfile) {
     FILE *input = fopen(inputfile, "r");
     if (input == NULL) {
@@ -245,7 +245,6 @@ void fileProcessor(char *inputfile, char *outputfile) {
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
-    int lineNo = -1;
 
     while ((read = getline(&line, &len, input)) != -1) {
         // Remove trailing newline character
@@ -402,12 +401,10 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
         if (*endptr != '\0') {
             printf("Conversion error occurred\n");
         }
-//        printf((const char *) regNumber);
         uint32_t regBin = regNumber << 5;
-        uint32_t finalVal = brStart | regBin;
-        printf("\nfinal val in binary:\n");
-        printBinary(finalVal);
-        printf("final val in hex: 0x%08X\n", finalVal);
+        uint32_t write_val = brStart | regBin;
+        writeToFile(write_val, file);
+        printf("%u", write_val);
     } else if (instruction.opcode[1] == '.') {
         size_t length = strlen(instruction.opcode) - 2; // Subtracting 2 for 'b.' prefix
         char *suffix = (char*)malloc(length + 1); // +1 for the null terminator
@@ -415,7 +412,19 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
             strcpy(suffix, &instruction.opcode[2]); // Copy the substring starting from the third character
         }
         uint32_t cond = getEncoding(suffix);
-        uint32_t finalVal = bCStart | cond;
+        int labelAddress = getAddress(SymbolTable, instruction.operand[1]);
+        int offset = abs(((0x0 + (lineNo * 4)) - labelAddress) / 4);
+        uint32_t simm19 = offset << 5;
+        uint32_t write_val = bCStart | simm19 | cond;
+        writeToFile(write_val, file);
+        printf("%u", write_val);
+    } else {
+        int labelAddress = getAddress(SymbolTable, instruction.operand[1]);
+        int offset = abs(((0x0 + (lineNo * 4)) - labelAddress) / 4);
+        uint32_t simm26 = offset;
+        uint32_t write_val = bStart | simm26;
+        writeToFile(write_val, file);
+        printf("%u", write_val);
     }
 }
 
