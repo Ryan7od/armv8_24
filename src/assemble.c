@@ -172,6 +172,7 @@ BranchMapping branchMapping[] = {
 
 size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
 int main(int argc, char **argv) {
+
     if (argc != 3) {
         fprintf(stderr, "incorrect number of arguments inputted\n");
         return 2;
@@ -294,7 +295,18 @@ static InstructionIR tokenizer(char instruction[]) {
     return new_instruction;
 }
 
-
+static int getAddress(dynarray symbolTable, const char *label) {
+    // Iterate through the list of symbol-address pairs
+    for (int i = 0; i < symbolTable->numItems; ++i) {
+        // Compare the current symbol with the input label
+        if (strcmp(symbolTable->data[i].Symbol, label) == 0) {
+            // If they match, return the corresponding address
+            return symbolTable->data[i].address;
+        }
+    }
+    // If no match is found, return an indicator (e.g., -1 for not found)
+    return -1;
+}
 InstructionIR parser(char *line) {
     if (*line == '.') {
         printf("d");
@@ -458,43 +470,73 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             uint32_t l = 0 << 22;
         }
         int xnNumber;
-        char *endptr2;
         char** memoryRegisters = allocateRegisters(instruction);
-        xnNumber = strtol(memoryRegisters[0], &endptr2, 10);
-        if (*endptr2 != '\0') {
-            printf("Conversion error occurred\n");
-        }
+        xnNumber = strtol(memoryRegisters[0] + 1, NULL, 10);
         uint32_t xn = xnNumber << 5;
         if (instruction.operand[1][length -1] == '!') {
             uint32_t u = 0;
             uint32_t i = 1 << 11;
             uint32_t endRegBit = 1 << 10;
+            int signedNumber;
+            signedNumber = strtol(memoryRegisters[1] + 1, NULL, 0);
+            uint32_t simm9 = signedNumber << 12;
+            uint32_t write_val = firstBit | sf | otherBits | u | l | simm9 | i | endRegBit | xn | rt;
+            writeToFile(write_val, file);
+            printf("%u", write_val);
         } else if (instruction.operand[2] != NULL){
             uint32_t u = 0;
             uint32_t endRegBit = 1 << 10;
+            int signedNumber;
+            signedNumber = strtol(instruction.operand[2] + 1, NULL, 0);
+            uint32_t simm9 = signedNumber << 12;
+            uint32_t write_val = firstBit | sf | otherBits | u | l | simm9 | endRegBit | xn | rt;
+            writeToFile(write_val, file);
+            printf("%u", write_val);
         } else if (memoryRegisters[1] != NULL && memoryRegisters[1][0] == 'x') {
             uint32_t u = 0;
             uint32_t firstRegBit = 1 << 21;
             uint32_t regOtherBits = 13 << 11;
             int xmNumber;
-            char *endptr3;
-            xmNumber = strtol(memoryRegisters[1], &endptr3, 10);
-            if (*endptr3 != '\0') {
-                printf("Conversion error occurred\n");
-            }
+            xmNumber = strtol(memoryRegisters[0] + 1, NULL, 10);
             uint32_t xm = xmNumber << 16;
-            uint32_t finalVal = firstBit | sf | otherBits | u | l | firstRegBit | xm | regOtherBits | xn | rt;
-            printf("\nfinal val 2 in binary:\n");
-            printBinary(finalVal);
-            printf("final val 2 in hex: 0x%08X\n", finalVal);
+            uint32_t write_val = firstBit | sf | otherBits | u | l | firstRegBit | xm | regOtherBits | xn | rt;
+            writeToFile(write_val, file);
+            printf("%u", write_val);
         } else {
+            int offsetNum;
+            if (memoryRegisters[1] != NULL) {
+                int unsignedNumber;
+                unsignedNumber = strtol(memoryRegisters[1] + 1, NULL, 0);
+                if (sf == 0) {
+                    offsetNum = unsignedNumber / 4;
+                } else {
+                    offsetNum = unsignedNumber /8;
+                }
+            } else {
+                offsetNum = 0;
+            }
+            uint32_t offset = offsetNum << 10;
             uint32_t u = 1 << 24;
+            uint32_t write_val = firstBit | sf | otherBits | u | l | offset | xn | rt;
+            writeToFile(write_val, file);
+            printf("%u", write_val);
         }
         free(memoryRegisters);
 
     } else {
-        uint32_t firstBit = 0 << 31;
+        uint32_t simm19;
         uint32_t otherBits = 3 << 27;
+        if (instruction.operand[1][0] == '#') {
+            int signedNumber;
+            signedNumber = strtol(instruction.operand[1] + 1, NULL, 0);
+            simm19 = signedNumber << 5;
+        } else {
+            int labelAddress = getAddress(SymbolTable, instruction.operand[1]);
+            simm19 = labelAddress << 5;
+        }
+        uint32_t write_val = sf | otherBits | simm19 | rt;
+        writeToFile(write_val, file);
+        printf("%u", write_val);
         //when its ldr <literal> so either label or #N
     }
 
