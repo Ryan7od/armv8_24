@@ -38,7 +38,7 @@ Yes.
 Yes, thorough.
 
 4. Using makefiles, or manual commands?
-We are using cb for both parts 1 and 2
+We are using cb for both parts 1 and 2. (Make MakeFile)
 
 5. Is the main branch free of any unneeded files?
 Yes.
@@ -57,3 +57,6 @@ Yes.
 4. How are the group members communicating?
 In person via group meetings and pair programming sessions.
 Online via call, text, groupchat and email.
+
+5. Extension: 
+Morse code.
