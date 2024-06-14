@@ -463,9 +463,7 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
         writeToFile(write_val, file);
         printf("%u", write_val);
     } else {
-        printf("into b\n");
         int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
-
         int offset = abs((((lineNo * 4)) - labelAddress) / 4);
         uint32_t simm26 = offset;
         uint32_t write_val = bStart | simm26;
