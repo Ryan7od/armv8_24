@@ -65,6 +65,7 @@ void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol);
 static void writeToFile(uint32_t write_val, FILE *file);
 static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static uint32_t getimmm(char *num);
+static void parseCompare(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
 
 InstructionIR parser(char *line);
@@ -163,7 +164,8 @@ OpcodeMapping opcodeMapping[] = {
         {"mul", 0},
         {"tst", 3<<29},
         {"mov", 1<<29},
-        {""}
+        {"cmp", 3<<29},
+        {"cmn", 1<<29}
 
 };
 
@@ -349,41 +351,50 @@ static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMappi
     uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
     uint32_t opi = 1 << 24;
     uint32_t sf = getSf(instruction.operand[0]);
-    printf("this is operand 2%s\n", (instruction.operand[2]));
+    char *op1 = instruction.operand[0];
+    char *op2 = instruction.operand[1];
+    char *op3 = instruction.operand[2]; 
+    char *op4 = instruction.operand[3];
+    if ((strcmp(instruction.opcode, "cmn") == 0) || strcmp(instruction.opcode, "cmp") == 0) {
+        op1 = NULL;
+        op2 = instruction.operand[0];
+        op3 = instruction.operand[1];
+        op4 = instruction.operand[2];
+    }
     // If statement checks whether instruction
-    if (*instruction.operand[2] == '#') {
-        char *startptr = instruction.operand[2] + 1;
+    if (*op3 == '#') {
+        char *startptr = op3 + 1;
         printf("%s\n", startptr);
         uint32_t imm12 = (getimmm(startptr)) << 10;
         printf("%u\n", imm12);
         uint32_t sl = 0;
-        if (instruction.operand[3] != NULL) {
-            if (strcmp(instruction.operand[3], "lsl #12") == 0) {
+        if (op4 != NULL) {
+            if (strcmp(op4, "lsl #12") == 0) {
                 sl = 1 << 22;
             }
         }
-        uint32_t rn = getReg(instruction.operand[1]) << 5;
-        uint32_t rd = getReg(instruction.operand[0]);
+        uint32_t rn = getReg(op2) << 5;
+        uint32_t rd = getReg(op1);
         uint32_t write_val = sf | opcode_bin | data_processing_immediate_code | opi | sl | imm12 | rn | rd;
         writeToFile(write_val, file);
         printf("%u\n", write_val);
     } else {
         uint32_t M = 0;
         uint32_t opr = 1 << 24;
-        uint32_t rm = getReg(instruction.operand[2]) << 16;
-        uint32_t rn = getReg(instruction.operand[1]) << 5;
-        uint32_t rd = getReg(instruction.operand[0]);
+        uint32_t rm = getReg(op3) << 16;
+        uint32_t rn = getReg(op2) << 5;
+        uint32_t rd = getReg(op1);
         uint32_t operand = 0;
-        if (instruction.operand[3] != NULL) {
+        if (op4 != NULL) {
             char *shift = malloc(3 * sizeof(char));
-            strncpy(shift, instruction.operand[3], 3);
+            strncpy(shift, op4, 3);
             if (strcmp(shift, "lsr") == 0) {
                 opr = 10 << 21;
             } else if (strcmp(shift, "asr") == 0) {
                 opr = 12 << 21;
             }
             free(shift);
-            char *number = instruction.operand[3] + 5;
+            char *number = op4 + 5;
             printf("number : %s\n", number);
             operand = getimmm(number) << 10;
             printf("%i\n", operand);
@@ -401,6 +412,7 @@ static uint32_t getEncoding(const char* mnemonic) {
     }
     exit(1);
 }
+
 
 static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "wb");
