@@ -98,7 +98,13 @@ static void parseTst(InstructionIR instruction, char *output, OpcodeMapping opco
 bool firstPassFlag = true;
 InstructionMapping mappings[] = {
         {"b",      parseBranchInstructions},
-        {"b.cond", parseBranchInstructions},
+        {"b.eq", parseBranchInstructions},
+        {"b.ne", parseBranchInstructions},
+        {"b.ge", parseBranchInstructions},
+        {"b.lt", parseBranchInstructions},
+        {"b.gt", parseBranchInstructions},
+        {"b.le", parseBranchInstructions},
+        {"b.al", parseBranchInstructions},
         {"br",     parseBranchInstructions},
         {"str",    parseLoadStoreInstructions},
         {"ldr",    parseLoadStoreInstructions},
@@ -313,6 +319,8 @@ static int getAddress(dynarray symbolTable, const char *label) {
             // If they match, return the corresponding address
             return symbolTable->data[i].address;
         }
+    }
+}
 
 static char * trim_leading_spaces(char *str) {
     int index = 0;
@@ -425,7 +433,7 @@ static uint32_t getEncoding(const char* mnemonic) {
 
 
 static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
-    FILE *file = fopen(output, "wb");
+    FILE *file = fopen(output, "ab");
     uint32_t bStart = 5 << 26;
     uint32_t brStart = 54815 << 16;
     uint32_t bCStart = 21 << 26;
@@ -449,7 +457,7 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
         uint32_t cond = getEncoding(suffix);
         int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
         printf("label: %d\n",labelAddress - 4);
-        int offset = abs((((lineNo * 4)) - (labelAddress - 4)) / 4);
+        int offset = abs((((lineNo * 4)) - (labelAddress)) / 4);
         uint32_t simm19 = offset << 5;
         uint32_t write_val = bCStart | simm19 | cond;
         writeToFile(write_val, file);
