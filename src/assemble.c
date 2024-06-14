@@ -626,6 +626,8 @@ static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping op
             opr = 1 << 22;
         } else if (strcmp(shift, "asr") == 0) {
             opr = 1 << 23;
+        } else if (strcmp(shift, "ror") == 0) {
+            opr = 3 << 22;
         }
         free(shift);
         char *number = instruction.operand[3] + 5;
