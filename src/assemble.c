@@ -163,10 +163,10 @@ BranchMapping branchMapping[] = {
 size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
 int main(int argc, char **argv) {
 
-//    if (argc != 3) {
-//        fprintf(stderr, "incorrect number of arguments inputted\n");
-//        return 2;
-//    }
+    if (argc != 3) {
+        fprintf(stderr, "incorrect number of arguments inputted\n");
+        return 2;
+    }
 
     SymbolTable = malloc(sizeof(struct dynarray));
     if (SymbolTable == NULL) {
@@ -185,42 +185,17 @@ int main(int argc, char **argv) {
 
 
 
-//    char *inputFile = argv[1];
-//    char *outputFile = argv[2];
-//    fileProcessor(inputFile, outputFile); //Pass 1
-//    firstPassFlag = false;
-//    fileProcessor(inputFile, outputFile); //Pass 2
+    char *inputFile = argv[1];
+    char *outputFile = argv[2];
+    fileProcessor(inputFile, outputFile); //Pass 1
+    firstPassFlag = false;
+    fileProcessor(inputFile, outputFile); //Pass 2
 
-    struct SA_pair test1 = createSA("d1", 7);
 
     // Assign a value to the address field
 
 
-    addToTable(SymbolTable, test1);
-    printf("%s\n", SymbolTable->data->Symbol);
-    printf("%d\n", SymbolTable->data->address);
-    struct SA_pair test3 = createSA("fin", 2);
-    addToTable(SymbolTable, test3);
 
-    char *ouput;
-
-    InstructionIR instructionTest;
-    instructionTest.opcode = "ldr";
-    instructionTest.operand[0] = "x2";
-    instructionTest.operand[1] = "d1";
-
-    parseLoadStoreInstructions(instructionTest, ouput, opcodeMapping, opcode_msize);
-
-    InstructionIR instructionTest2;
-    instructionTest2.opcode = "ldr";
-    instructionTest2.operand[0] = "x8";
-    instructionTest2.operand[1] = "[x30, #56]!";
-    parseLoadStoreInstructions(instructionTest2, ouput, opcodeMapping, opcode_msize);
-
-    InstructionIR instructionTest3;
-    instructionTest3.opcode = "b";
-    instructionTest3.operand[0] = "fin";
-    parseBranchInstructions(instructionTest3, ouput, opcodeMapping, opcode_msize);
 
     freeTable(SymbolTable);
 
@@ -411,8 +386,7 @@ static uint32_t getEncoding(const char* mnemonic) {
 }
 
 static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
-//    FILE *file = fopen(output, "wb");
-    printf("into branch\n");
+    FILE *file = fopen(output, "wb");
     uint32_t bStart = 5 << 26;
     uint32_t brStart = 54815 << 16;
     uint32_t bCStart = 21 << 26;
@@ -425,8 +399,7 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
         }
         uint32_t regBin = regNumber << 5;
         uint32_t write_val = brStart | regBin;
-//        writeToFile(write_val, file);
-        printf("1B: 0x%X\n", write_val);
+        writeToFile(write_val, file);
         printf("%u", write_val);
     } else if (instruction.opcode[1] == '.') {
         size_t length = strlen(instruction.opcode) - 2; // Subtracting 2 for 'b.' prefix
@@ -435,14 +408,12 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
             strcpy(suffix, &instruction.opcode[2]); // Copy the substring starting from the third character
         }
         uint32_t cond = getEncoding(suffix);
-//        lineNo = 2; //for testing
         int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
         printf("label: %d\n",labelAddress - 4);
         int offset = abs((((lineNo * 4)) - (labelAddress - 4)) / 4);
         uint32_t simm19 = offset << 5;
         uint32_t write_val = bCStart | simm19 | cond;
-//        writeToFile(write_val, file);
-        printf("2B: 0x%X\n", write_val);
+        writeToFile(write_val, file);
         printf("%u", write_val);
     } else {
         printf("into b\n");
@@ -451,10 +422,11 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
         int offset = abs((((lineNo * 4)) - labelAddress) / 4);
         uint32_t simm26 = offset;
         uint32_t write_val = bStart | simm26;
-//        writeToFile(write_val, file);
-        printf("3B: 0x%X\n", write_val);
+        writeToFile(write_val, file);
         printf("%u", write_val);
     }
+    fclose(file);
+
 }
 
 char** allocateRegisters(InstructionIR instruction) {
@@ -480,12 +452,10 @@ char** allocateRegisters(InstructionIR instruction) {
 
     if (token != NULL) {
         strcpy(registers[0],token);
-//        registers[0] = strdup(token); // Allocate memory and copy the string
         token = strtok(NULL, delimiters);// Move to the next token
         if (token != NULL) {
             registers[1] = malloc((strlen(token) + 1) * sizeof(char));
             strcpy(registers[1],token);
-//            registers[1] = strdup(token); // Allocate memory and copy the string
         }
     }
 
@@ -513,8 +483,7 @@ void printBinary(uint32_t n) {
 // single data transfer is str or ldr
 // load literal just ldr
 static void parseLoadStoreInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
-//    FILE *file = fopen(output, "wb");
-    printf("Load store running\n");
+    FILE *file = fopen(output, "wb");
     int rtNumber;
     char *endptr;
     uint32_t sf;
@@ -529,7 +498,6 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
         sf = 1 << 30;
     }
     if (instruction.operand[1][0] == '[') {
-        printf("single data trasnfer\n");
         uint32_t l;
         int length = strlen(instruction.operand[1]);
         uint32_t firstBit = 1 << 31;
@@ -540,7 +508,6 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             l = 0 << 22;
         }
         int xnNumber;
-        printf("here\n");
         char** memoryRegisters = allocateRegisters(instruction);
         xnNumber = strtol(memoryRegisters[0] + 1, NULL, 10);
         uint32_t xn = xnNumber << 5;
@@ -552,9 +519,8 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             signedNumber = strtol(memoryRegisters[1] + 1, NULL, 0);
             uint32_t simm9 = signedNumber << 12;
             uint32_t write_val = firstBit | sf | otherBits | u | l | simm9 | i | endRegBit | xn | rt;
-//            writeToFile(write_val, file);
-            printf("1: 0x%X\n", write_val);
-            printf("1: %u", write_val);
+            writeToFile(write_val, file);
+            printf("%u", write_val);
         } else if (instruction.operand[2] != NULL){
             uint32_t u = 0;
             uint32_t endRegBit = 1 << 10;
@@ -562,35 +528,18 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             signedNumber = strtol(instruction.operand[2] + 1, NULL, 0);
             uint32_t simm9 = signedNumber << 12;
             uint32_t write_val = firstBit | sf | otherBits | u | l | simm9 | endRegBit | xn | rt;
-//            writeToFile(write_val, file);
-            printf("2: 0x%X\n", write_val);
-            printf("2: %u", write_val);
+            writeToFile(write_val, file);
+            printf("%u", write_val);
         } else if (memoryRegisters[1] != NULL && memoryRegisters[1][0] == 'x') {
-            printf("mem reg: %s\n", memoryRegisters[0]);
             uint32_t u = 0;
             uint32_t firstRegBit = 1 << 21;
             uint32_t regOtherBits = 13 << 11;
             int xmNumber = strtol(memoryRegisters[1] + 1, NULL, 10);
-            printf("%d\n",xmNumber);
             uint32_t xm = xmNumber << 16;
             uint32_t write_val = firstBit | sf | otherBits | u | l | firstRegBit | xm | regOtherBits | xn | rt;
-//            writeToFile(write_val, file);
-            printBinary(firstBit); //yes
-            printBinary(sf); //yes
-            printBinary(otherBits); //yes
-            printBinary(u); //yes
-            printBinary(l); //yes
-            printBinary(firstRegBit); //yes
-            printBinary(xm);
-            printBinary(regOtherBits);
-
-            printBinary(xn);
-            printBinary(rt);
-            printBinary(write_val);
-            printf("3: 0x%X\n", write_val);
-            printf("3: %u", write_val);
+            writeToFile(write_val, file);
+            printf("%u", write_val);
         } else {
-            printf("gone into unsigned\n");
             int offsetNum;
             if (memoryRegisters[1] != NULL) {
                 int unsignedNumber;
@@ -606,10 +555,8 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             uint32_t offset = offsetNum << 10;
             uint32_t u = 1 << 24;
             uint32_t write_val = firstBit | sf | otherBits | u | l | offset | xn | rt;
-//            writeToFile(write_val, file);
-
-            printf("4: 0x%X\n", write_val);
-            printf("4: %u", write_val);
+            writeToFile(write_val, file);
+            printf("%u", write_val);
         }
         free(memoryRegisters);
 
@@ -621,23 +568,14 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             signedNumber = strtol(instruction.operand[1] + 1, NULL, 0);
             simm19 = signedNumber << 5;
         } else {
-            printf("gone into else\n");
-            lineNo = 1; //for testing
             int labelAddress = getAddress(SymbolTable, instruction.operand[1]);
-            int instructionAddress = lineNo * 4;
-            printf("%d\n",lineNo);
-            printf("%d\n",labelAddress);
             simm19 = (((labelAddress - 4) - lineNo) / 4) << 5;
         }
         uint32_t write_val = sf | otherBits | simm19 | rt;
-
-
-//        writeToFile(write_val, file);
-        printf("5: 0x%X", write_val);
-        //when its ldr <literal> so either label or #N
+        writeToFile(write_val, file);
+        printf("%u", write_val);
     }
-
-
+    fclose(file);
 }
 
 
