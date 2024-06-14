@@ -88,6 +88,7 @@ static uint32_t getReg(char *reg);
 static void parseLoadStoreInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size);
 static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size);
 static void parseMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+static void parseDirective(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
 
 static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
@@ -125,6 +126,7 @@ InstructionMapping mappings[] = {
         {"msub", parseMultiply},
         {"mul", parseMultiply},
         {"mneg", parseMultiply},
+        {".int", parseDirective},
         // Add more mappings as needed
 };
 size_t mappingCount = sizeof(mappings) / sizeof(mappings[0]);
@@ -162,7 +164,6 @@ BranchMapping branchMapping[] = {
 
 size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
 int main(int argc, char **argv) {
-
     if (argc != 3) {
         fprintf(stderr, "incorrect number of arguments inputted\n");
         return 2;
@@ -303,14 +304,18 @@ static int getAddress(dynarray symbolTable, const char *label) {
     return -1;
 }
 InstructionIR parser(char *line) {
-    if (*line == '.') {
-        printf("d");
-    } else {
-        return tokenizer(line);
-    }
+    return tokenizer(line);
 }
 
 
+static void parseDirective(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+    FILE *file = fopen(output, "wb");
+    int address = (int)strtol(instruction.operand[0], NULL, 0);
+    uint32_t write_val = address;
+    writeToFile(write_val, file);
+    printf("%u", write_val);
+    fclose(file);
+}
 
 
 
