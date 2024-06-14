@@ -64,7 +64,7 @@ void fileProcessor(char *inputfile, char *outputfile);
 void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol);
 static void writeToFile(uint32_t write_val, FILE *file);
 static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-
+static uint32_t getimmm(char *num);
 
 
 InstructionIR parser(char *line);
@@ -261,7 +261,8 @@ void fileProcessor(char *inputfile, char *outputfile) {
             }
         } else {
             if (!firstPassFlag) {
-                InstructionIR instruction = parser(line);
+                InstructionIR instruction = {0};
+                instruction = parser(line);
                 InstructionParser parser = functionClassifier(instruction, mappings, mappingCount);
                 (*parser)(instruction, outputfile, opcodeMapping, opcode_msize);
             }
@@ -280,7 +281,7 @@ static InstructionIR tokenizer(char instruction[]) {
     printf("%s\n", ops);
     char* operand;
     char* operands[4];
-    InstructionIR new_instruction;
+    InstructionIR new_instruction = {0};
     int operand_count = 0;
     operand = strtok(ops, ",");
     printf("%s\n", operand);
@@ -346,11 +347,13 @@ static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMappi
     if (*instruction.operand[2] == '#') {
         char *startptr = instruction.operand[2] + 1;
         printf("%s\n", startptr);
-        uint32_t imm12 = (strtoul(startptr, NULL, 16)) << 10;
+        uint32_t imm12 = (getimmm(startptr)) << 10;
         printf("%u\n", imm12);
         uint32_t sl = 0;
-        if (strcmp(instruction.operand[3], "lsl #12") == 0) {
-            sl = 1 << 22;
+        if (instruction.operand[3] != NULL) {
+            if (strcmp(instruction.operand[3], "lsl #12") == 0) {
+                sl = 1 << 22;
+            }
         }
         uint32_t rn = getReg(instruction.operand[1]) << 5;
         uint32_t rd = getReg(instruction.operand[0]);
@@ -513,9 +516,13 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
 
 }
 
-static uint32_t getimmm16(char *num) {
-    if (*(num + 1) == 'x') {
-        return strtoul(num+2, NULL, 16);
+static uint32_t getimmm(char *num) {
+    printf("length %i\n", strlen(num));
+    if (strlen(num) >= 2) {
+        printf("hi\n");
+        if (*(num+1) == 'x') {
+            return strtoul(num+2, NULL, 16);
+        }
     }
     return strtoul(num, NULL, 10);
 }
@@ -527,14 +534,14 @@ static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping
     uint32_t rd = getReg(instruction.operand[0]);
     uint32_t sf = getSf(instruction.operand[0]);
     char *startptr = instruction.operand[1] + (1* sizeof (char));
-    uint32_t imm16 = getimmm16(startptr);
+    uint32_t imm16 = getimmm(startptr);
     printf("%u\n", imm16);
     imm16 = imm16 << 5;
     uint32_t hw = 0;
     if (instruction.operand[2] != NULL) {
         char *numptr = instruction.operand[2] + (5 * sizeof (char ));
         hw = (strtoul(numptr, NULL, 10)) / 16;
-        printf("%u", hw);
+        printf("%u\n", hw);
         hw = hw << 21;
     }
     uint32_t write_val = sf | opcode_bin | data_processing_immediate_code | opi | hw | imm16 | rd;
