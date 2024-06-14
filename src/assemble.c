@@ -157,7 +157,10 @@ OpcodeMapping opcodeMapping[] = {
         {"eor", 1<<30},
         {"eon", 1<<30},
         {"ands", 3<<29},
-        {"bics", 3<<29}
+        {"bics", 3<<29},
+        {"mneg", 0},
+        {"mul", 0}
+
 };
 
 BranchMapping branchMapping[] = {
@@ -373,11 +376,13 @@ static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMappi
             if (strcmp(shift, "lsr") == 0) {
                 opr = 10 << 21;
             } else if (strcmp(shift, "asr") == 0) {
-                opr = 12 << 23;
+                opr = 12 << 21;
             }
             free(shift);
             char *number = instruction.operand[3] + 5;
-            operand = (strtoul(number, NULL, 10)) << 10;
+            printf("number : %s\n", number);
+            operand = getimmm(number) << 10;
+            printf("%i\n", operand);
         }
         uint32_t write_val = sf | opcode_bin | M | data_processing_register_code | opr | rm | operand | rn | rd;
         writeToFile(write_val, file);
@@ -517,9 +522,7 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
 }
 
 static uint32_t getimmm(char *num) {
-    printf("length %i\n", strlen(num));
     if (strlen(num) >= 2) {
-        printf("hi\n");
         if (*(num+1) == 'x') {
             return strtoul(num+2, NULL, 16);
         }
@@ -567,7 +570,7 @@ static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping
     uint32_t rd = getReg(instruction.operand[0]);
     uint32_t sf = getSf(instruction.operand[0]);
     uint32_t x = 0;
-    if (strcmp(instruction.opcode, "msub") == 0) {
+    if (strcmp(instruction.opcode, "msub") == 0 || strcmp(instruction.opcode, "mneg") == 0) {
         x = 1 << 15;
     }
     uint32_t write_val = sf | opcode_binary | m | data_processing_register_code | opr | rm | x | ra | rn | rd;
@@ -578,7 +581,7 @@ static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping
 
 static uint32_t getReg(char *reg) {
     if (reg == NULL) {
-        return 0;
+        return 31;
     }
     uint32_t rv = strtoul((reg + (1*sizeof (char))), NULL, 10);
     return rv;
@@ -626,7 +629,7 @@ static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping op
         }
         free(shift);
         char *number = instruction.operand[3] + 5;
-        operand = (strtoul(number, NULL, 10)) << 10;
+        operand = getimmm(number) << 10;
     }
     uint32_t N = getN(instruction.opcode) << 21;
     uint32_t write_val = sf | opcode_bin | M | data_processing_register_code | N | opr | rm | operand | rn | rd;
