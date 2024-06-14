@@ -199,6 +199,8 @@ int main(int argc, char **argv) {
     addToTable(SymbolTable, test1);
     printf("%s\n", SymbolTable->data->Symbol);
     printf("%d\n", SymbolTable->data->address);
+    struct SA_pair test3 = createSA("fin", 2);
+    addToTable(SymbolTable, test3);
 
     char *ouput;
 
@@ -214,6 +216,11 @@ int main(int argc, char **argv) {
     instructionTest2.operand[0] = "x8";
     instructionTest2.operand[1] = "[x30, #56]!";
     parseLoadStoreInstructions(instructionTest2, ouput, opcodeMapping, opcode_msize);
+
+    InstructionIR instructionTest3;
+    instructionTest3.opcode = "b";
+    instructionTest3.operand[0] = "fin";
+    parseBranchInstructions(instructionTest3, ouput, opcodeMapping, opcode_msize);
 
     freeTable(SymbolTable);
 
@@ -404,7 +411,8 @@ static uint32_t getEncoding(const char* mnemonic) {
 }
 
 static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
-    FILE *file = fopen(output, "wb");
+//    FILE *file = fopen(output, "wb");
+    printf("into branch\n");
     uint32_t bStart = 5 << 26;
     uint32_t brStart = 54815 << 16;
     uint32_t bCStart = 21 << 26;
@@ -417,7 +425,8 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
         }
         uint32_t regBin = regNumber << 5;
         uint32_t write_val = brStart | regBin;
-        writeToFile(write_val, file);
+//        writeToFile(write_val, file);
+        printf("1B: 0x%X\n", write_val);
         printf("%u", write_val);
     } else if (instruction.opcode[1] == '.') {
         size_t length = strlen(instruction.opcode) - 2; // Subtracting 2 for 'b.' prefix
@@ -426,18 +435,24 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
             strcpy(suffix, &instruction.opcode[2]); // Copy the substring starting from the third character
         }
         uint32_t cond = getEncoding(suffix);
-        int labelAddress = getAddress(SymbolTable, instruction.operand[1]);
-        int offset = abs(((0x0 + (lineNo * 4)) - labelAddress) / 4);
+//        lineNo = 2; //for testing
+        int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
+        printf("label: %d\n",labelAddress - 4);
+        int offset = abs((((lineNo * 4)) - (labelAddress - 4)) / 4);
         uint32_t simm19 = offset << 5;
         uint32_t write_val = bCStart | simm19 | cond;
-        writeToFile(write_val, file);
+//        writeToFile(write_val, file);
+        printf("2B: 0x%X\n", write_val);
         printf("%u", write_val);
     } else {
-        int labelAddress = getAddress(SymbolTable, instruction.operand[1]);
-        int offset = abs(((0x0 + (lineNo * 4)) - labelAddress) / 4);
+        printf("into b\n");
+        int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
+
+        int offset = abs((((lineNo * 4)) - labelAddress) / 4);
         uint32_t simm26 = offset;
         uint32_t write_val = bStart | simm26;
-        writeToFile(write_val, file);
+//        writeToFile(write_val, file);
+        printf("3B: 0x%X\n", write_val);
         printf("%u", write_val);
     }
 }
