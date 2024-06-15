@@ -284,29 +284,48 @@ void fileProcessor(char *inputfile, char *outputfile) {
 }
 
 
-
 static InstructionIR tokenizer(char instruction[]) {
     char* mne = strtok(instruction, " ");
     char* ops = strtok(NULL, "");
-    printf("%s\n", mne);
-    printf("%s\n", ops);
+    
+    printf("Mnemonic: %s\n", mne);
+    printf("Operands string: %s\n", ops);
+
+    InstructionIR new_instruction = {0};
+    new_instruction.opcode = mne;
+
     char* operand;
     char* operands[4];
-    InstructionIR new_instruction = {0};
     int operand_count = 0;
+
     operand = strtok(ops, ",");
-    printf("%s\n", operand);
-    new_instruction.opcode = mne;
     while (operand != NULL && operand_count < 4) {
-        operands[operand_count++] = operand;
+        char* complete_operand = strdup(operand);
+        
+        if (strchr(operand, '[') != NULL && strchr(operand, ']') == NULL) {
+            char* next_part = strtok(NULL, ",");
+            while (next_part != NULL && strchr(next_part, ']') == NULL) {
+                complete_operand = realloc(complete_operand, strlen(complete_operand) + strlen(next_part) + 2);
+                strcat(complete_operand, ",");
+                strcat(complete_operand, next_part);
+                next_part = strtok(NULL, ",");
+            }
+            if (next_part != NULL) {
+                complete_operand = realloc(complete_operand, strlen(complete_operand) + strlen(next_part) + 2);
+                strcat(complete_operand, ",");
+                strcat(complete_operand, next_part);
+            }
+        }
+
+        operands[operand_count++] = trim_leading_spaces(complete_operand);
         operand = strtok(NULL, ",");
     }
 
-    // Print the operands
     for (int i = 0; i < operand_count; i++) {
-        new_instruction.operand[i] = trim_leading_spaces(operands[i]);
-        printf("Operand %d: %s\n", i + 1, operands[i]);
+        new_instruction.operand[i] = operands[i];
+        printf("Operand %d: %s\n", i + 1, new_instruction.operand[i]);
     }
+
     return new_instruction;
 }
 
@@ -539,6 +558,9 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
         }
         int xnNumber;
         char** memoryRegisters = allocateRegisters(instruction);
+        printf("reg 1: %s\n",memoryRegisters[0]);
+        printf("reg 2: %s\n",memoryRegisters[0]);
+
         xnNumber = strtol(memoryRegisters[0] + 1, NULL, 10);
         uint32_t xn = xnNumber << 5;
         if (instruction.operand[1][length -1] == '!') {
@@ -551,7 +573,7 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             uint32_t write_val = firstBit | sf | otherBits | u | l | simm9 | i | endRegBit | xn | rt;
             writeToFile(write_val, file);
             printf("%u", write_val);
-        } else if (instruction.operand[2] != NULL){
+        } else if (instruction.operand[2] != NULL && memoryRegisters[1] == NULL){
             uint32_t u = 0;
             uint32_t endRegBit = 1 << 10;
             int signedNumber;
