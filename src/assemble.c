@@ -235,7 +235,7 @@ void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol) {
 struct SA_pair createSA(char *label, int lineNo) {
     struct SA_pair newSA;
     newSA.Symbol = label;
-    int address = 0x0 + ((lineNo + 1) * 4);
+    int address = lineNo;
     newSA.address = address;
     return newSA;
 }
@@ -245,7 +245,8 @@ void freeTable(dynarray symbolTable) {
     free(symbolTable);
 }
 
-int lineNo = -1;
+int PC = 0;
+int lineNo = 0;
 void fileProcessor(char *inputfile, char *outputfile) {
     FILE *input = fopen(inputfile, "r");
     if (input == NULL) {
@@ -265,9 +266,27 @@ void fileProcessor(char *inputfile, char *outputfile) {
         if (line[read - 1] == '\n') {
             line[read - 1] = '\0';
         }
+        char *trimmed = line;
+        while (*trimmed == ' ' || *trimmed == '\t') {
+            trimmed++;
+        }
+        // Check if the line is empty or is a label
+        if (!(trimmed[0] == '\0' || trimmed[0] == '\n' || (strchr(trimmed, ':') != NULL))) {
+            // Increment PC only if it's not an empty line or a label
+            lineNo++;
+        }
         if (isalpha(*line) && line[read - 2] == ':') {
             if (firstPassFlag) {
-                struct SA_pair pair = createSA(line, lineNo);
+                char *colon_pos = strchr(line, ':');
+                size_t lengthLabel = colon_pos - line;
+                char *newLine = (char *)malloc((lengthLabel + 1) * sizeof(char));
+                strncpy(newLine, line, lengthLabel);
+                newLine[lengthLabel] = '\0';
+
+                struct SA_pair pair = createSA(newLine, lineNo);
+                printf("Adding to symboltable symbol new: %s\n", pair.Symbol);
+                printf("Adding to symboltable addy: %d\n", pair.address);
+                
                 addToTable(SymbolTable, pair);
             }
         } else {
@@ -276,9 +295,22 @@ void fileProcessor(char *inputfile, char *outputfile) {
                 instruction = parser(line);
                 InstructionParser parser = functionClassifier(instruction, mappings, mappingCount);
                 (*parser)(instruction, outputfile, opcodeMapping, opcode_msize);
+                char *trimmed = line;
+                while (*trimmed == ' ' || *trimmed == '\t') {
+                    trimmed++;
+                }
+
+                // Check if the line is empty or is a label
+                if (!(trimmed[0] == '\0' || trimmed[0] == '\n' || (strchr(trimmed, ':') != NULL))) {
+                    // Increment PC only if it's not an empty line or a label
+                    PC++;
+                }
+
             }
-            lineNo++;
         }
+        printf("line processed: %s\n", line);
+        printf("PC new 2: %d\n", PC);
+        printf("lineNo: %d\n", lineNo);
     }
     fclose(input);
 }
@@ -475,15 +507,17 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
         }
         uint32_t cond = getEncoding(suffix);
         int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
-        printf("label: %d\n",labelAddress - 4);
-        int offset = abs((((lineNo * 4)) - (labelAddress)) / 4);
+        printf("label in ST2: %d\n",labelAddress);
+        printf("PC in branch2: %d\n", PC);
+        int offset = abs(labelAddress - PC);
+        printf("offset: %d\n", offset);
         uint32_t simm19 = offset << 5;
         uint32_t write_val = bCStart | simm19 | cond;
         writeToFile(write_val, file);
         printf("%u", write_val);
     } else {
         int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
-        int offset = abs((((lineNo * 4)) - labelAddress) / 4);
+        int offset = abs(labelAddress - PC);
         uint32_t simm26 = offset;
         uint32_t write_val = bStart | simm26;
         writeToFile(write_val, file);
@@ -547,6 +581,7 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
         sf = 1 << 30;
     }
     if (instruction.operand[1][0] == '[') {
+        printf("gone into sdt");
         uint32_t l;
         int length = strlen(instruction.operand[1]);
         uint32_t firstBit = 1 << 31;
@@ -574,6 +609,7 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             writeToFile(write_val, file);
             printf("%u", write_val);
         } else if (instruction.operand[2] != NULL && memoryRegisters[1] == NULL){
+            printf("gone into post");
             uint32_t u = 0;
             uint32_t endRegBit = 1 << 10;
             int signedNumber;
