@@ -88,7 +88,6 @@ static InstructionParser functionClassifier(InstructionIR instruction,  Instruct
 static uint32_t getReg(char *reg);
 static void parseLoadStoreInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size);
 static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size);
-static void parseMove(InstructionIR instruction, FILE *file, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void parseDirective(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
 
@@ -390,7 +389,7 @@ InstructionIR parser(char *line) {
 
 
 static void parseDirective(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
-    FILE *file = fopen(output, "wb");
+    FILE *file = fopen(output, "ab");
     int address = (int)strtol(instruction.operand[0], NULL, 0);
     uint32_t write_val = address;
     writeToFile(write_val, file);
@@ -509,16 +508,26 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
         int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
         printf("label in ST2: %d\n",labelAddress);
         printf("PC in branch2: %d\n", PC);
-        int offset = abs(labelAddress - PC);
+        int offset = labelAddress - PC;
+        uint32_t simm19;
+        if (offset < 0) {
+            simm19 = (uint32_t)(offset & 0x7FFFF) << 5;
+        } else {
+            simm19 = offset << 5;
+        }
         printf("offset: %d\n", offset);
-        uint32_t simm19 = offset << 5;
         uint32_t write_val = bCStart | simm19 | cond;
         writeToFile(write_val, file);
         printf("%u", write_val);
     } else {
         int labelAddress = getAddress(SymbolTable, instruction.operand[0]);
-        int offset = abs(labelAddress - PC);
-        uint32_t simm26 = offset;
+        int offset = labelAddress - PC;
+        uint32_t simm26;
+        if (offset < 0) {
+            simm26 = (uint32_t)(offset & 0x7FFFF);
+        } else {
+            simm26 = offset;
+        }
         uint32_t write_val = bStart | simm26;
         writeToFile(write_val, file);
         printf("%u", write_val);
@@ -614,7 +623,12 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             uint32_t endRegBit = 1 << 10;
             int signedNumber;
             signedNumber = strtol(instruction.operand[2] + 1, NULL, 0);
-            uint32_t simm9 = signedNumber << 12;
+            uint32_t simm9;
+            if (signedNumber < 0) {
+                simm9 = (uint32_t)(signedNumber & 0x1FF) << 12;
+            } else {
+                simm9 = signedNumber << 12;
+            }
             uint32_t write_val = firstBit | sf | otherBits | u | l | simm9 | endRegBit | xn | rt;
             writeToFile(write_val, file);
             printf("%u", write_val);
