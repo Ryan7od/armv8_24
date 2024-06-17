@@ -3,11 +3,11 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <stdint.h>
 
 #define MaxLineLength 30
 #define SymbolTableSize 20
-
-
 
 
 struct SA_pair {
@@ -82,7 +82,6 @@ static uint32_t getSf(char *reg);
 static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], size_t size);
 void freeTable(dynarray symbolTable);
 
-static void parseTwoOperand(InstructionIR instruction, FILE *file);
 static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
 static uint32_t getReg(char *reg);
@@ -94,6 +93,8 @@ static void parseDirective(InstructionIR instruction, char *output, OpcodeMappin
 static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void parseTst(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
+static void growTable(dynarray mySymbolTable);
+static void parseMv(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 bool firstPassFlag = true;
 InstructionMapping mappings[] = {
         {"b",      parseBranchInstructions},
@@ -227,6 +228,7 @@ static void growTable(dynarray mySymbolTable) {
 }
 
 void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol) {
+    growTable(mySymbolTable);
     mySymbolTable->data[mySymbolTable->numItems] = new_symbol;
     mySymbolTable->numItems++;
 }
@@ -371,6 +373,7 @@ static int getAddress(dynarray symbolTable, const char *label) {
             return symbolTable->data[i].address;
         }
     }
+    exit(1);
 }
 
 static char * trim_leading_spaces(char *str) {
@@ -456,11 +459,14 @@ static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMappi
         uint32_t rd = getReg(op1);
         uint32_t operand = 0;
         if (op4 != NULL) {
-            char *shift = malloc(3 * sizeof(char));
+            printf("shift\n");
+            char *shift = malloc(4 * sizeof(char));
             strncpy(shift, op4, 3);
+            shift[3] = '\0';
             if (strcmp(shift, "lsr") == 0) {
                 opr = 10 << 21;
             } else if (strcmp(shift, "asr") == 0) {
+                printf("asr\n");
                 opr = 12 << 21;
             }
             free(shift);
@@ -790,8 +796,9 @@ static void writeToFile(uint32_t write_val, FILE *file) {
 
 static uint32_t getOpr(char *operand) {
     uint32_t opr = 0;
-    char *shift = malloc(3 * sizeof(char));
+    char *shift = malloc(4 * sizeof(char));
     strncpy(shift, operand, 3);
+    shift[3] = '\0';
     if (strcmp(shift, "lsr") == 0) {
         opr = 1 << 22;
     } else if (strcmp(shift, "asr") == 0) {
@@ -817,11 +824,11 @@ static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping op
     uint32_t opr = 0;
     uint32_t rm = ((strcmp(instruction.opcode, "mov") == 0) ? getReg(instruction.operand[1]) : getReg(instruction.operand[2]));
     rm = rm << 16;
-    uint32_t rn = ((strcmp(instruction.opcode, "mov") == 0) || strcmp(instruction.operand, "mvn") == 0) ? getReg(NULL) : getReg(instruction.operand[1]);
+    uint32_t rn = ((strcmp(instruction.opcode, "mov") == 0) || strcmp(instruction.opcode, "mvn") == 0) ? getReg(NULL) : getReg(instruction.operand[1]);
     rn = rn << 5;
     uint32_t rd = getReg(instruction.operand[0]);
     uint32_t operand = 0;
-    char* immOp = (strcmp(instruction.operand, "mvn") == 0) ? instruction.operand[1] : instruction.operand[3];
+    char* immOp = (strcmp(instruction.opcode, "mvn") == 0) ? instruction.operand[1] : instruction.operand[3];
     if (immOp != NULL) {
         opr = getOpr(instruction.operand[3]);
         char *number = instruction.operand[3] + 5;
