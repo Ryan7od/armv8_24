@@ -274,7 +274,7 @@ void fileProcessor(char *inputfile, char *outputfile) {
             // Increment PC only if it's not an empty line or a label
             lineNo++;
         }
-        if (isalpha(*line) && line[read - 2] == ':') {
+        if ((line[read - 2] == ':') || (line[read - 3] == ':')) {
             if (firstPassFlag) {
                 char *colon_pos = strchr(line, ':');
                 size_t lengthLabel = colon_pos - line;
@@ -390,10 +390,11 @@ InstructionIR parser(char *line) {
 
 static void parseDirective(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
+    printf(".int parsing");
     int address = (int)strtol(instruction.operand[0], NULL, 0);
     uint32_t write_val = address;
     writeToFile(write_val, file);
-    printf("%u", write_val);
+    printf("%u\n", write_val);
     fclose(file);
 }
 
@@ -480,7 +481,22 @@ static uint32_t getEncoding(const char* mnemonic) {
     }
     exit(1);
 }
+void printBinary(uint32_t n) {
+    // Define the number of bits in uint32_t
+    int bits = sizeof(uint32_t) * 8;
 
+    // Iterate through each bit
+    for (int i = bits - 1; i >= 0; i--) {
+        // Print the corresponding bit
+        printf("%u", (n >> i) & 1);
+
+        // Add a space every 4 bits for readability
+        if (i % 4 == 0) {
+            printf(" ");
+        }
+    }
+    printf("\n");
+}
 
 static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
@@ -671,8 +687,17 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
             simm19 = signedNumber << 5;
         } else {
             int labelAddress = getAddress(SymbolTable, instruction.operand[1]);
-            simm19 = (((labelAddress - 4) - lineNo) / 4) << 5;
+            int offset = labelAddress - PC;
+            printf("offset lit2: %d\n", offset);
+            if (offset < 0) {
+                simm19 = (uint32_t)(offset & 0x7FFFF) << 5;
+                printf("less");
+            } else {
+                simm19 = offset << 5;
+                printf("more");
+            }
         }
+        printBinary(simm19);
         uint32_t write_val = sf | otherBits | simm19 | rt;
         writeToFile(write_val, file);
         printf("%u", write_val);
@@ -782,6 +807,7 @@ static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping op
     FILE *file = fopen(output, "ab");
     if ((strcmp(instruction.opcode, "and") == 0) && (strcmp(instruction.operand[0], "x0") == 0) && (strcmp(instruction.operand[1], "x0") == 0) && (strcmp(instruction.operand[2], "x0") == 0)) {
         writeToFile(2315255808, file);
+        fclose(file);
         return;
     }
     uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
