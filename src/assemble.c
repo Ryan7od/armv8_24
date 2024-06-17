@@ -274,6 +274,7 @@ void fileProcessor(char *inputfile, char *outputfile) {
             // Increment PC only if it's not an empty line or a label
             lineNo++;
         }
+        
         if ((line[read - 2] == ':') || (line[read - 3] == ':')) {
             if (firstPassFlag) {
                 char *colon_pos = strchr(line, ':');
