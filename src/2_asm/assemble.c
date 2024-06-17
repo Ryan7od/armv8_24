@@ -65,7 +65,6 @@ void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol);
 static void writeToFile(uint32_t write_val, FILE *file);
 static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static uint32_t getimmm(char *num);
-static void parseCompare(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 
 
 InstructionIR parser(char *line);
@@ -94,7 +93,6 @@ static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMappi
 static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void parseTst(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 static void growTable(dynarray mySymbolTable);
-static void parseMv(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
 bool firstPassFlag = true;
 InstructionMapping mappings[] = {
         {"b",      parseBranchInstructions},
@@ -853,36 +851,6 @@ static void parseTst(InstructionIR instruction, char *output, OpcodeMapping opco
     uint32_t operand = 0;
     if (instruction.operand[2] != NULL) {
         opr = getOpr(instruction.operand[2]);
-        char *number = instruction.operand[2] + 5;
-        operand = getimmm(number) << 10;
-    }
-    uint32_t write_val = sf | opcode_bin | M | data_processing_register_code  | opr | rm | operand | rn | rd;
-    writeToFile(write_val, file);
-    printf("%u", write_val);
-    fclose(file);
-}
-
-static void parseMv(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
-    FILE *file = fopen(output, "ab");
-    uint32_t opcode_bin = getOpcode(instruction, opcodeMapping, opcode_map_size);
-    uint32_t sf = getSf(instruction.operand[0]);
-    uint32_t M = 0;
-    uint32_t opr = 0;
-    uint32_t rd = getReg(NULL); //gets the zero register 
-    uint32_t rn = getReg(instruction.operand[0]) << 5; 
-    uint32_t rm = getReg(instruction.operand[1]) << 16;
-    uint32_t operand = 0;
-    if (instruction.operand[2] != NULL) {
-        char *shift = malloc(3 * sizeof(char));
-        strncpy(shift, instruction.operand[2], 3);
-        if (strcmp(shift, "lsr") == 0) {
-            opr = 1 << 22;
-        } else if (strcmp(shift, "asr") == 0) {
-            opr = 1 << 23;
-        } else if (strcmp(shift, "ror") == 0) {
-            opr = 3 << 22;
-        }
-        free(shift);
         char *number = instruction.operand[2] + 5;
         operand = getimmm(number) << 10;
     }
