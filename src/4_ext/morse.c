@@ -15,33 +15,32 @@ typedef enum {
 
 // Morse code representation
 Morse morseCode[27][MAX_MORSE_LENGTH] = {
-    {DOT, DASH, END},             // A
-    {DASH, DOT, DOT, DOT, END},   // B
-    {DASH, DOT, DASH, DOT, END},  // C
-    {DASH, DOT, DOT, END},        // D
-    {DOT, END},                   // E
-    {DOT, DOT, DASH, DOT, END},   // F
-    {DASH, DASH, DOT, END},       // G
-    {DOT, DOT, DOT, DOT, END},    // H
-    {DOT, DOT, END},              // I
-    {DOT, DASH, DASH, DASH, END}, // J
-    {DASH, DOT, DASH, END},       // K
-    {DOT, DASH, DOT, DOT, END},   // L
-    {DASH, DASH, END},            // M
-    {DASH, DOT, END},             // N
-    {DASH, DASH, DASH, END},      // O
-    {DOT, DASH, DASH, DOT, END},  // P
-    {DASH, DASH, DOT, DASH, END}, // Q
-    {DOT, DASH, DOT, END},        // R
-    {DOT, DOT, DOT, END},         // S
-    {DASH, END},                  // T
-    {DOT, DOT, DASH, END},        // U
-    {DOT, DOT, DOT, DASH, END},   // V
-    {DOT, DASH, DASH, END},       // W
-    {DASH, DOT, DOT, DASH, END},  // X
-    {DASH, DOT, DASH, DASH, END}, // Y
-    {DASH, DASH, DOT, DOT, END},   // Z
-    {SPACE} //Space
+        {DOT, DASH, END},             // A
+        {DASH, DOT, DOT, DOT, END},   // B
+        {DASH, DOT, DASH, DOT, END},  // C
+        {DASH, DOT, DOT, END},        // D
+        {DOT, END},                   // E
+        {DOT, DOT, DASH, DOT, END},   // F
+        {DASH, DASH, DOT, END},       // G
+        {DOT, DOT, DOT, DOT, END},    // H
+        {DOT, DOT, END},              // I
+        {DOT, DASH, DASH, DASH, END}, // J
+        {DASH, DOT, DASH, END},       // K
+        {DOT, DASH, DOT, DOT, END},   // L
+        {DASH, DASH, END},            // M
+        {DASH, DOT, END},             // N
+        {DASH, DASH, DASH, END},      // O
+        {DOT, DASH, DASH, DOT, END},  // P
+        {DASH, DASH, DOT, DASH, END}, // Q
+        {DOT, DASH, DOT, END},        // R
+        {DOT, DOT, DOT, END},         // S
+        {DASH, END},                  // T
+        {DOT, DOT, DASH, END},        // U
+        {DOT, DOT, DOT, DASH, END},   // V
+        {DOT, DASH, DASH, END},       // W
+        {DASH, DOT, DOT, DASH, END},  // X
+        {DASH, DOT, DASH, DASH, END}, // Y
+        {DASH, DASH, DOT, DOT, END},   // Z
 };
 
 // Function to print Morse code individual character
@@ -71,8 +70,51 @@ void printMorseString(const char *str) {
     printf("\n");
 }
 
+void printMorseToFile(Morse* morse, int* count, FILE* file) {
+    for (int i = 0; morse[i] != END; i++) {
+        if (morse[i] == DOT) {
+            fprintf(file, "str w0, [w4]\n"
+                          "str w6, [w3]\n"
+                          "movz w5, #30, lsl #16\n"
+                          "DELAY%d:\n"
+                          "sub w5, w5, #1\n"
+                          "cmp w5, w0\n"
+                          "b.ne DELAY%d\n"
+                          "str w0, [w3]\n"
+                          "str w6, [w4]\n",
+                    *count, *count);
+        } else if (morse[i] == DASH) {
+            fprintf(file, "str w0, [w4]\n"
+                          "str w6, [w3]\n"
+                          "movz w5, #100, lsl #16\n"
+                          "DELAY%d:\n"
+                          "sub w5, w5, #1\n"
+                          "cmp w5, w0\n"
+                          "b.ne DELAY%d\n"
+                          "str w0, [w3]\n"
+                          "str w6, [w4]\n",
+                    *count, *count);
+        }
+        *count = *count + 1;
+        fprintf(file,"movz w5, #50, lsl #16\n"
+                      "DELAY%d:\n"
+                      "sub w5, w5, #1\n"
+                      "cmp w5, w0\n"
+                      "b.ne DELAY%d\n",
+                *count, *count);
+        *count = *count + 1;
+    }
+    fprintf(file, "movz w5, #110, lsl #16\n"
+                  "DELAY%d:\n"
+                  "sub w5, w5, #1\n"
+                  "cmp w5, w0\n"
+                  "b.ne DELAY%d\n",
+            *count, *count);
+    *count = *count + 1;
+}
+
 void makeMorseBlink(const char *str) {
-    FILE* file = fopen("blinking_morse.s", "w");
+    FILE *file = fopen("blinking_morse.s", "w");
     int count = 0;
 
     //Initialise assembly file
@@ -96,64 +138,25 @@ void makeMorseBlink(const char *str) {
                   "str w0, [w4, #0x4]\n");
 
     while (*str) {
-        Morse* val = NULL;
         if (*str >= 'A' && *str <= 'Z') {
-            val = (morseCode[*str - 'A']);
+            printMorseToFile(morseCode[*str - 'A'], &count, file);
         } else if (*str >= 'a' && *str <= 'z') {
-            val = morseCode[*str - 'a'];
+            printMorseToFile(morseCode[*str - 'a'], &count, file);
         } else {
-            val = morseCode[26];
-        }
-        str++;
-
-        while(*val) {
-            if (*val == DOT) {
-                fprintf(file, "str w0, [w4]\n"
-                              "str w6, [w3]\n"
-                              "movz w5, #50, lsl #16\n"
-                              "DELAY%d:\n"
-                              "sub w5, w5, #1\n"
-                              "cmp w5, w0\n"
-                              "b.ne DELAY%d\n"
-                              "str w0, [w3]\n"
-                              "str w6, [w4]\n",
-                              count, count);
-            } else if (*val == DASH) {
-                fprintf(file, "str w0, [w4]\n"
-                              "str w6, [w3]\n"
-                              "movz w5, #100, lsl #16\n"
-                              "DELAY%d:\n"
-                              "sub w5, w5, #1\n"
-                              "cmp w5, w0\n"
-                              "b.ne DELAY%d\n"
-                              "str w0, [w3]\n"
-                              "str w6, [w4]\n",
-                              count, count);
-            } else if (*val == SPACE) {
-                fprintf(file, "movz w5, #200, lsl #16\n"
-                              "DELAY%d:\n"
-                              "sub w5, w5, #1\n"
-                              "cmp w5, w0\n"
-                              "b.ne DELAY%d\n",
-                              count, count);
-            }
-
-            val++;
-            count++;
-
-            //Space between characters
-            fprintf(file, "movz w5, #75, lsl #16\n"
+            fprintf(file, "movz w5, #110, lsl #16\n"
                           "DELAY%d:\n"
                           "sub w5, w5, #1\n"
                           "cmp w5, w0\n"
                           "b.ne DELAY%d\n",
-                          count, count);
-
+                    count, count);
             count++;
         }
-    }
+        str++;
 
+    }
 }
+
+
 
 int main(int argc, char **argv) {
     if (argc != 2 ) {
