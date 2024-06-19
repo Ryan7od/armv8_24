@@ -28,7 +28,7 @@ ASM_OBJS := $(ASM_SRCS:.c=.o)
 EXT_OBJS := $(EXT_SRCS:.c=.o)
 
 # Define rule to compile all
-all: emulate assemble extension
+all: emulate assemble extension pi
 
 
 # Rule to link the object files into the executable
@@ -38,8 +38,15 @@ emulate: $(EMU_OBJS)
 assemble: $(ASM_OBJS)
 	$(CC) $(ASM_OBJS) -o $@
 
+pi:
+	./assemble $(PI_DIR)/led_blink.s kernel8.img
+
 extension: $(EXT_OBJS)
 	$(CC) $(EXT_OBJS) -o $@
+
+morseRun:
+	./extension $(TEXT)
+	./assemble blinking_morse.s kernel8.img
 
 # Rule to compile source files into object files
 $(EMU_DIR)/%.o: $(EMU_DIR)/%.c
@@ -48,11 +55,11 @@ $(EMU_DIR)/%.o: $(EMU_DIR)/%.c
 $(ASM_DIR)/%.o: $(ASM_DIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-        
+
 $(EXT_DIR)/%.o: $(EXT_DIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # Rule to clean the build directory
 .PHONY: clean
 clean:
-	rm -f $(EMU_OBJS) emulate $(ASM_OBJS) assemble $(EXT_OBJS) extension
+	rm -f $(EMU_OBJS) emulate $(ASM_OBJS) assemble $(EXT_OBJS) extension kernel8.img blinking_morse.s
