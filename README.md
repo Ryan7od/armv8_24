@@ -75,7 +75,7 @@ In both cases you must run this command in the directory in which the executable
 
 To manually create the kernel file for part 3 run:
 ```bash
-./assemble ./3_pi/blink_led.s kernel8.img
+./assemble ./3_pi/led_blink.s kernel8.img
 ```
 
 To manually create the kernel file for part 4 run:
