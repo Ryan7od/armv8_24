@@ -2,6 +2,8 @@
 
 This is group 24's source code for the Imperial CS 2024 C Group Project (CGP)
 
+**Only run this code on Linux**
+
 ## Components
 
 In ./src there are 4 subdirectories:
