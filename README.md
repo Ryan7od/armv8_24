@@ -21,31 +21,31 @@ C Program that turns English text into Morse code, outputting it as a string and
 
 ## Compilation
 
-First, go to src:
+First, navigate to src:
 ```bash
 cd src/
 ```
 
-Then to compile using the MakeFile:
+Then to compile using the MakeFile run:
 ```bash
-# To compile part 1
-make emulate
-
-# To compile part 2
-make assemble
-
-# To compile part 3
-make pi
-
-# To compile part 4
-make morse
-
 # To compile parts 1, 2, 3, 4
 make all
 
-#To delete all compiled files
+# To compile part 1 individually
+make emulate
+
+# To compile part 2 individually
+make assemble
+
+# To compile part 3 individually
+make pi
+
+# To compile part 4 individually
+make morse
+
+# To delete all compiled files
 make clean
-# make clean also deletes all auxiliary files such as object files, binary files and kernel8.img
+# make clean also deletes all object files, binary files and kernel8.img
 ```
 
 All executable files are created directly in ./src and all object files are created in their respective subdirectories.
