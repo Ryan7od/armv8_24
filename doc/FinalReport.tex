@@ -1,0 +1,172 @@
+\documentclass{article}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{titling}
+
+\geometry{bottom=1in}
+% \pagecolor{pink}
+
+\setlength{\droptitle}{-3cm}
+\title{C Project Final Report}
+\author{Aizere Shaikenova, Veer Vij, Max Stoddard, Ryan O'Donnell}
+
+\begin{document}
+\small
+\maketitle
+
+
+
+\section{Part II: Assembler}
+\label{sec:assembler}
+\subsection{Structure}
+Our assembler is structured to efficiently translate assembly language instructions into binary code. The key components of our structure are:
+
+\begin{itemize}
+    \item \textbf{Internal Representation:} We created an ADT that provides an internal representation of instructions. The opcode and operands can be accessed directly from an instance of the ADT, improving readability and ease of debugging. Additionally, in certain cases there is a second internal representation for handling aliases.
+    \item \textbf{Main Function Mapping:} We utilise a global variable which maps each opcode to its corresponding parsing function. For instance, it calls \texttt{parseBranch}, \texttt{parseLoadStore}, and \texttt{parseArithmetic} based on the instruction's opcode.
+    \item \textbf{Symbol Table:} We created a symbol table ADT, which stores a label and its address as a pair. This is crucial for the \texttt{parseBranch} function, which needs to access these addresses during parsing.
+    \item \textbf{Two-Pass Method:} Our assembler employs a two-pass method:
+    \begin{enumerate}
+        \item \textbf{First Pass:} The assembler scans the assembly code to identify and record the addresses of all labels in the symbol table.
+        \item \textbf{Second Pass:} The assembler parses each instruction into binary. Each parsing function (\texttt{parseBranch}, \texttt{parseLoadStore}, \texttt{parseArithmetic}, etc.) writes the generated binary code to the output file. The binary generation logic is based on the operands and the opcode.
+    \end{enumerate}
+\end{itemize}
+
+
+\subsection{Modularization}
+To enhance efficiency, maintainability, and ease of debugging, our assembler is divided into three modules: \texttt{utilities}, \texttt{symbol table}, and \texttt{assemble}.
+
+\begin{itemize}
+    \item \textbf{Utilities Module:} This module contains utility functions such as \texttt{getAddress}, \texttt{allocateRegisters}, and \texttt{trimLeadingSpaces}. These functions are used by various parsing functions to reduce code repetition and improve efficiency.
+    \item \textbf{Symbol Table Module:} This module manages the symbol table, including functions to store and retrieve the addresses of labels. It centralizes the handling of labels, making the code easier to manage.
+    \item \textbf{Assemble Module:} This is the main module that handles the overall assembly process. It opens the input assembly code file, parses each line one by one, and writes the final binary output file. This module coordinates the two-pass method and integrates the utility and symbol table functionalities.
+\end{itemize}
+
+The benefits of this modularization approach include:
+\begin{itemize}
+    \item \textbf{Greater Efficiency:} Modularization allows for reusable functions, reducing redundancy and improving performance.
+    \item \textbf{Easier Code Management:} By separating functionalities into distinct modules, it is easier to keep track of the code and understand its structure.
+    \item \textbf{Simplified Debugging:} Isolating different parts of the assembler into modules makes it easier to identify and fix bugs.
+\end{itemize}
+
+\section{Part III: Blinking LED on Raspberry Pi}
+\label{sec:part3}
+\subsection{Implementation}
+To make the LED blink, we wrote assembly code with the following steps:
+
+\begin{itemize}
+    \item \textbf{Initialize Pins:} Initialise all pins to input by setting all bits in the GPIO function selection addresses to zero.
+    \item \textbf{Set Pin Mode:} Configure the third pin to output mode by setting its three bits to one.
+    \item \textbf{Clear Pins:} Set the clear bits for all pins to zero.
+    \item \textbf{Main Loop Start:} Begin the main loop.
+    \begin{itemize}
+        \item \textbf{Turn LED On:} Set the set bit to one and the clear bit to zero for the third pin.
+        \item \textbf{Delay Loop:} Create a delay using a nested loop that counts down from \texttt{50 lsl 16}, approximately equal to 1 second (3.6 million).
+        \item \textbf{Turn LED Off:} Set the set bit to zero and the clear bit to one for the third pin.
+        \item \textbf{Delay Loop:} Create an identical delay loop to maintain the light off state for the same duration.
+    \end{itemize}
+    \item \textbf{Repeat Loop:} Branch back to the start of the main loop to create an infinite loop, causing the LED to flash continuously.
+\end{itemize}
+
+After writing this assembly code, we used our assembler from Part II to convert it into a binary output file. We then performed the following steps:
+
+\begin{itemize}
+    \item \textbf{Transfer to SD Card:} Copied the binary output file to an SD card.
+    \item \textbf{Setup Hardware:} Inserted the SD card into the Raspberry Pi. Connected the LED, resistor, and wires on the breadboard. Connected one wire to the ground and the other to the third pin.
+\end{itemize}
+
+\section{Part IV: Extension}
+\label{sec:extension}
+\subsection{Overview}
+For our extension, we decided to make the LED flash out Morse code based on some string input so we can spell out words.
+
+\subsection{Example Usage}
+The extension allows us to translate any English words into Morse code. This feature could be used to communicate with people over long distances or with those who have hearing impairments if a large light bulb was used.
+
+\subsection{High-Level Design}
+\begin{itemize}
+    \item \textbf{Morse Representation:} We represent Morse code as an enumerated type, which can be a dot, dash, or end.
+    \item \textbf{Mapping Letters:} Each letter in the English alphabet is defined as an array of the Morse enumerated type, with END always being the last item in the array. This creates a map from English to Morse.
+    \item \textbf{makeMorseBlink Function:} This function loops through every character in the input string, converts it to its Morse representation, and passes it to \texttt{printMorseToFile}.
+    \item \textbf{printMorseToFile Function:} This function processes each character in the Morse representation and prints the corresponding assembly code to the output file. It also increments a counter for each character to ensure that each loop label is unique.
+    \item \textbf{Blinking Logic:} The LED blinks for a short time for a dot and longer for a dash, with a break at END.
+\end{itemize}
+
+\subsection{Challenges}
+During the implementation of the extension, we encountered several challenges:
+
+\begin{itemize}
+    \item We needed to get Part III working before starting the extension, which took time as we struggled to get the light bulb flashing correctly.
+    \item Additional challenges included ensuring that each Morse code character had a unique label for the loop in the assembly code and managing the timing precisely for the dots, dashes, and breaks.
+\end{itemize}
+
+
+\section{Testing the Extension}
+\label{sec:testing}
+\subsection{Testing Approach}
+To test the extension, we compared the Morse code output of the flashing light bulb to the actual Morse code translation and ensured all the letters and words matched up correctly.
+
+\subsection{Effectiveness}
+This testing method was fine as it clearly showed whether the program worked or not. However, it would have been better to implement a test suite, particularly if our project was larger, to automate and streamline the testing process. However, we believe this was the most effective testing method in the timeframe given.
+
+\section{Group Reflection}
+\label{sec:group_reflection}
+
+\subsection{Communication}
+Our communication was very good throughout the project. 
+
+\begin{itemize}
+    \item We held daily meetings to update each other on our progress.
+    \item We used a group chat to quickly resolve errors and ask questions, providing effective and timely communication.
+    \item We set clear deadlines from the outset, which further enhanced our coordination and clarity.
+\end{itemize}
+
+\subsection{Work Distribution}
+We divided Part One and Part Two so we could work on each in pairs.
+
+\begin{itemize}
+    \item Max and Ryan took on Part One, while Veer and Aizere worked on Part Two. 
+    \item This approach allowed us to start on Part Three earlier, giving us more time for completion.
+    \item Parts One and Two were similar in workload and small enough that splitting them between four people would have resulted in inefficiencies.
+    \item Working in pairs enabled effective pair programming.
+    \item For Parts Three and Four, we tackled the tasks as a whole group, programming together.
+    \item We divided the report writing, editing, and video filming among different team members.
+\end{itemize}
+
+\subsection{Lessons Learned}
+\subsubsection{Things We'd Keep the Same}
+\begin{itemize}
+    \item Our effective communication and clear deadline setting.
+    \item Holding frequent meetings to keep each other updated.
+    \item Pair programming was highly beneficial.
+    \item We effectivly handled edge cases via the testsuite in parts 1 and 2.
+    \item Overall, we got along as a team and kept our spirits high.
+\end{itemize}
+
+\subsubsection{Things We'd Change}
+\begin{itemize}
+    \item Modularizing the code earlier for better clarity and easier collaboration.
+    \item Ensuring we test on both Windows and macOS if using C, as our code passed fewer tests on Linux than on macOS.
+    \item Testing throughout the development process to save time on debugging large amounts of code at the end.
+    \item Adding better comments to the code throughout development for improved readability and maintenance.
+\end{itemize}
+
+\section{Individual Reflections}
+\label{sec:individual_reflections}
+
+\subsection{Max's Reflection}
+Reflecting on my experience in this group project, I felt that I fit in quite well. My primary strength was in organizing our workflow and ensuring we met our deadlines. I often took the initiative in setting up our daily meetings and creating a structured timeline for our tasks. This organizational role complemented my technical skills, particularly in Part One of the project. However, I realized that my communication style can be a bit direct at times, which might have been overwhelming for some team members. Moving forward, I would aim to be more mindful of different communication preferences within a team. Overall, I believe my leadership and organizational skills were assets to our group's success.
+
+\subsection{Ryan's Reflection}
+Working with Group 24 has been a highly educational experience for me. I found my strength in debugging and improving our code, especially during our work on the assembler. The first Peer Assessment pointed out my attention to detail, although I sometimes focused too much on small things, which slowed us down. Our task division was crucial—it allowed me to focus on what I do best without feeling overwhelmed. Moving forward, I aim to balance my meticulousness with a broader view of project timelines. The collaborative environment we created was a highlight, and I am committed to maintaining such supportive teamwork in future projects.
+
+\subsection{Veer's Reflection}
+This project has been a significant learning journey for me. Initially, navigating the technical challenges in Part Two was tough, but the team's unity and constant communication were invaluable for my growth. Utilising problem-solving and creative thinking skills, we were able to overcome obstacles of the project. Acknowledged in the first Peer Assessment for my enthusiasm and team spirit, I believe keeping morale high was crucial. However, although our planning was great I find we could have started modularisation earlier and kept a group standard for the code which would make it easier for later on in the project. Looking ahead, I am eager to further develop my technical skills and continue applying creative solutions to complex problems. Our effective teamwork and clear communication were essential to our success.
+
+\subsection{Aizere's Reflection}
+Participating in this project has been a rewarding experience. I found that my primary strength was in the practical implementation of our ideas, especially during the extension phase. I enjoyed translating our conceptual designs into functional code. The first Peer Assessment feedback mentioned my ability to adapt quickly to new tasks, which was particularly relevant as we moved from Part Two to Parts Three and Four. One area I identified for improvement is my tendency to sometimes struggle with time management when faced with multiple tasks simultaneously. I realized that this led to occasional moments of stress during the project. In the future, I plan to work on refining my prioritization skills and maintaining a clearer focus on task deadlines. Despite this challenge, I appreciated our effective teamwork and clear communication, which were pivotal to our success. This project has significantly enhanced both my technical abilities and my approach to collaborative work.
+
+\end{document}
