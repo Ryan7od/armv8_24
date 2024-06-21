@@ -5,10 +5,9 @@
 // TODO convert into
 
 typedef enum {
-    DOT,
-    DASH,
-    END,
-    SPACE  // To indicate the end of Morse code sequence
+    DOT, // Morse code dot
+    DASH, // Morse code dash
+    END, // To indicate end of alphabetic character
 } Morse;
 
 #define MAX_MORSE_LENGTH 6  // Longest Morse code sequence is 6 symbols including end
