@@ -6,84 +6,21 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+
+#include "symbolTable.h"
+#include "utilities.h"
+
 #define MaxLineLength 30
-#define SymbolTableSize 20
 
 
-struct SA_pair {
-    char *Symbol;
-    int address;
-};
-
-struct dynarray {
-    struct SA_pair *data;
-    int numItems;
-    int size;
-};
-typedef struct dynarray *dynarray;
-
-
-typedef enum {instruction, directive, label} LineType;
-
-#define MAX_OPERANDS 4
-#define BranchMappingSize 7
-typedef struct {
-    char *opcode;
-    char *operand[MAX_OPERANDS];
-} InstructionIR;
-
-typedef struct {
-    const char* mnemonic;
-    uint32_t opcode_bin;
-} OpcodeMapping;
-
-
-typedef struct {
-    const char* mnemonic;
-    uint32_t encoding;
-} BranchMapping;
-
-typedef void (*InstructionParser)(InstructionIR, char *, OpcodeMapping [], size_t);
-static uint32_t getN(const char *opcode);
 
 uint32_t data_processing_immediate_code = 1 << 28;
 uint32_t data_processing_register_code = 5 << 25;
 
-typedef struct {
-    const char* mnemonic;
-    InstructionParser parser;
-} InstructionMapping;
 
 
 
-//Function initialisation
-struct SA_pair createSA(char *label, int lineNo);
-static char * trim_leading_spaces(char *str);
-void fileProcessor(char *inputfile, char *outputfile);
-void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol);
-static void writeToFile(uint32_t write_val, FILE *file);
-static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static uint32_t getimmm(char *num);
-InstructionIR parser(char *line);
-char* DataProcessingInstruction(InstructionIR instruction);
-static uint32_t getSf(char *reg);
-static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], size_t size);
-void freeTable(dynarray symbolTable);
-static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static InstructionParser functionClassifier(InstructionIR instruction,  InstructionMapping* mappings, size_t mapSize);
-static uint32_t getReg(char *reg);
-static void parseLoadStoreInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size);
-static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size);
-static void parseDirective(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static void parseTst(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size);
-static void growTable(dynarray mySymbolTable);
-
-
-
-bool firstPassFlag = true;
-InstructionMapping mappings[] = { //Table mapping instruction opcodes to their function
+InstructionMapping mappings[38] = { //Table mapping instruction opcodes to their function
         {"b",      parseBranchInstructions},
         {"b.eq", parseBranchInstructions},
         {"b.ne", parseBranchInstructions},
@@ -122,12 +59,13 @@ InstructionMapping mappings[] = { //Table mapping instruction opcodes to their f
         {"mul", parseMultiply},
         {"mneg", parseMultiply},
         {".int", parseDirective},
-        // Add more mappings as needed
+        
 };
-size_t mappingCount = sizeof(mappings) / sizeof(mappings[0]);
-dynarray SymbolTable;
 
-OpcodeMapping opcodeMapping[] = { //instruction mapping opcode mnemonic to number with bit mask  
+size_t mappingCount = 38;
+
+
+OpcodeMapping opcodeMapping[23] = { //instruction mapping opcode mnemonic to number with bit mask  
         {"add", 0},
         {"adds", 1 << 29},
         {"sub", 1 << 30},
@@ -154,7 +92,7 @@ OpcodeMapping opcodeMapping[] = { //instruction mapping opcode mnemonic to numbe
 
 };
 
-BranchMapping branchMapping[] = {
+BranchMapping branchMapping[7] = {
         {"eq", 0},
         {"ne", 1},
         {"ge", 10},
@@ -164,7 +102,17 @@ BranchMapping branchMapping[] = {
         {"al", 14}
 };
 
-size_t opcode_msize = sizeof(opcodeMapping) / sizeof(opcodeMapping[0]);
+size_t opcode_msize = 23;
+
+
+//sets first pass as true 
+bool firstPassFlag = true;
+
+
+dynarray SymbolTable;
+
+
+
 int main(int argc, char **argv) {
     if (argc != 3) {
         fprintf(stderr, "incorrect number of arguments inputted\n");
@@ -204,34 +152,6 @@ int main(int argc, char **argv) {
    return EXIT_SUCCESS;
 };
 
-static void growTable(dynarray mySymbolTable) { //helper function to increase size of symbol table if needed
-    if (mySymbolTable->numItems == mySymbolTable->size) {
-        mySymbolTable->size *= 2;
-        mySymbolTable->data = realloc(mySymbolTable->data, mySymbolTable->size * sizeof(struct SA_pair));
-        if (mySymbolTable->data == NULL) {
-            printf("Symbol table failed to be resized");
-        }
-    }
-}
-
-void addToTable(dynarray mySymbolTable, struct SA_pair new_symbol) {
-    growTable(mySymbolTable);
-    mySymbolTable->data[mySymbolTable->numItems] = new_symbol;
-    mySymbolTable->numItems++;
-}
-
-struct SA_pair createSA(char *label, int lineNo) { //creates a symbol table pair 
-    struct SA_pair newSA;
-    newSA.Symbol = label;
-    int address = lineNo;
-    newSA.address = address;
-    return newSA;
-}
-
-void freeTable(dynarray symbolTable) {
-    free(symbolTable->data);
-    free(symbolTable);
-}
 
 int PC = 0; //global program counter variable
 int lineNo = 0; //global line number
@@ -348,27 +268,6 @@ static InstructionIR tokenizer(char instruction[]) {
 }
 
 
-static int getAddress(dynarray symbolTable, const char *label) { //helper function to return the address of a label 
-    // Iterate through the list of symbol-address pairs
-    for (int i = 0; i < symbolTable->numItems; ++i) { 
-        // Compare the current symbol with the input label
-        if (strcmp(symbolTable->data[i].Symbol, label) == 0) {
-            // If they match, return the corresponding address
-            return symbolTable->data[i].address;
-        }
-    }
-    exit(1);
-}
-
-static char * trim_leading_spaces(char *str) {
-    int index = 0;
-    //iterates through list until a space character is not seen 
-    while(isspace(str[index])) { 
-        index++;
-    }
-    char *newstr = str + index;
-    return newstr; //returns string without leading spaces
-}
 
 
 
@@ -377,7 +276,7 @@ InstructionIR parser(char *line) {
 }
 
 
-static void parseDirective(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+extern void parseDirective(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
     printf(".int parsing");
     int address = (int)strtol(instruction.operand[0], NULL, 0);
@@ -390,7 +289,7 @@ static void parseDirective(InstructionIR instruction, char *output, OpcodeMappin
 
 
 
-static InstructionParser functionClassifier(InstructionIR instruction, InstructionMapping* mapping, size_t mapSize) {
+extern InstructionParser functionClassifier(InstructionIR instruction, InstructionMapping* mapping, size_t mapSize) {
     //iterates through the function map and returns the matching function to the opcode 
     for (size_t i = 0; i < mapSize; i++) {
         if (strcmp(instruction.opcode, mappings[i].mnemonic) == 0) { return  mapping[i].parser; }
@@ -399,15 +298,8 @@ static InstructionParser functionClassifier(InstructionIR instruction, Instructi
 }
 
 
-static uint32_t getOpcode(InstructionIR instructionIr, OpcodeMapping mapping[], size_t size) {
-    //iterates through the opcode map and returns the matching opcode number to the opcode mnemonic  
-    for (size_t i = 0; i < size; i++) {
-        if (strcmp(instructionIr.opcode, mapping[i].mnemonic) == 0) {return mapping[i].opcode_bin;}
-    }
-    exit(1);
-}
 
-static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+extern void parseArithmetic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
 
     //sets opcode, opi and sf (standard for all arithmetic instructions)
@@ -488,35 +380,9 @@ static void parseArithmetic(InstructionIR instruction, char *output, OpcodeMappi
     fclose(file);
 }
 
-//Helper function to get the binary encoding of conditional branches
-static uint32_t getEncoding(const char* mnemonic) {
-    for (int i = 0; i < BranchMappingSize; i++) {
-        if (strcmp(branchMapping[i].mnemonic, mnemonic) == 0) {
-            return branchMapping[i].encoding;
-        }
-    }
-    exit(1);
-}
 
 
-void printBinary(uint32_t n) {
-    // Define the number of bits in uint32_t
-    int bits = sizeof(uint32_t) * 8;
-
-    // Iterate through each bit
-    for (int i = bits - 1; i >= 0; i--) {
-        // Print the corresponding bit
-        printf("%u", (n >> i) & 1);
-
-        // Add a space every 4 bits for readability
-        if (i % 4 == 0) {
-            printf(" ");
-        }
-    }
-    printf("\n");
-}
-
-static void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
+extern void parseBranchInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
 
     //set standard branch binary numbers 
@@ -580,45 +446,11 @@ static void parseBranchInstructions(InstructionIR instruction, char *output, Opc
     fclose(file);
 }
 
-char** allocateRegisters(InstructionIR instruction) {
-    char* token;
-    const char *delimiters = ", []!";
-    char operand[50];
-    strncpy(operand, instruction.operand[1], sizeof(operand));
-    operand[sizeof(operand) - 1] = '\0';
-
-    char** registers = malloc(2 * sizeof(char*));
-    if (registers == NULL) {
-        printf("Memory allocation failed\n");
-        exit(1);
-    }
-
-    // Initialize both pointers to NULL
-    registers[0] = NULL;
-    registers[1] = NULL;
-
-    // Parse the instruction to extract register(s)
-    token = strtok(operand, delimiters);
-    registers[0] = malloc((strlen(token) + 1) * sizeof(char));
-
-    if (token != NULL) {
-        strcpy(registers[0],token);
-        token = strtok(NULL, delimiters);// Move to the next token
-        if (token != NULL) {
-            registers[1] = malloc((strlen(token) + 1) * sizeof(char));
-            strcpy(registers[1],token);
-        }
-    }
-
-
-    return registers;
-}
-
 
 
 // single data transfer is str or ldr
 // load literal just ldr
-static void parseLoadStoreInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
+extern void parseLoadStoreInstructions(InstructionIR instruction, char *output, OpcodeMapping mapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
 
     //Initialising values
@@ -745,18 +577,9 @@ static void parseLoadStoreInstructions(InstructionIR instruction, char *output, 
     fclose(file);
 }
 
-//Helper function to get an immediate value 
-static uint32_t getimmm(char *num) {
-    if (strlen(num) >= 2) {
-        //if statement checks whether number is hex or decimal 
-        if (*(num+1) == 'x') {
-            return strtoul(num+2, NULL, 16);
-        }
-    }
-    return strtoul(num, NULL, 10);
-}
 
-static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+
+extern void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
 
     //getting the standard binary numbers for wide move instructions 
@@ -788,7 +611,7 @@ static void parseWideMove(InstructionIR instruction, char *output, OpcodeMapping
 
 
 
-static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+extern void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
 
     //setting standard bits for all multiply instructions
@@ -814,59 +637,10 @@ static void parseMultiply(InstructionIR instruction, char *output, OpcodeMapping
 
 }
 
-//Helper function to return the register 
-static uint32_t getReg(char *reg) {
-    //returns 31 for the zero register
-    if (reg == NULL || (strcmp(reg+1, "zr") == 0)) {
-        return 31;
-    }
-    uint32_t rv = strtoul((reg + (1*sizeof (char))), NULL, 10);
-    return rv;
-}
-
-//Helper function to return the significant bit 
-static uint32_t getSf(char *reg) {
-    //significant bit 0 if w register and 1 otherwise 
-    if (*reg == 'w' || *reg == 'W') {
-        return 0;
-    } else {
-        return 1 << 31;
-    }
-}
-
-//helper function which writes to file
-static void writeToFile(uint32_t write_val, FILE *file) {
-    size_t written = fwrite(&write_val, sizeof(uint32_t), 1, file);
-
-    //if nothing is written an error occurs
-    if (written != 1) {
-        fprintf(file, "error writing to file");
-        exit(1);
-    }
-}
-
-//helper function which gets the opr in a shift
-static uint32_t getOpr(char *operand) {
-
-    uint32_t opr = 0;
-    char *shift = malloc(4 * sizeof(char));
-    strncpy(shift, operand, 3);
-    shift[3] = '\0'; //ensuring the string copy is closed
-
-    if (strcmp(shift, "lsr") == 0) {
-        opr = 1 << 22;
-    } else if (strcmp(shift, "asr") == 0) {
-        opr = 1 << 23;
-    } else if (strcmp(shift, "ror") == 0) {
-        opr = 3 << 22;
-    }
-    free(shift);
-
-    return opr;
-}
 
 
-static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+
+extern void parseLogic(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
     
 
@@ -908,7 +682,7 @@ static void parseLogic(InstructionIR instruction, char *output, OpcodeMapping op
     fclose(file);
 }
 
-static void parseTst(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
+extern void parseTst(InstructionIR instruction, char *output, OpcodeMapping opcodeMapping[], size_t opcode_map_size) {
     FILE *file = fopen(output, "ab");
 
     //sets standard bits for tst 
@@ -935,11 +709,3 @@ static void parseTst(InstructionIR instruction, char *output, OpcodeMapping opco
 }
 
 
-//Helper function to return the N bit for logic instructions 
-static uint32_t getN(const char *opcode) {
-
-    if (strcmp(opcode, "bic") == 0 || strcmp(opcode, "orn") == 0 || strcmp(opcode, "eon") == 0 || strcmp(opcode, "bics") == 0) {
-        return 1;
-    }
-    return 0;
-}
