@@ -18,7 +18,11 @@ EMU_SRCS := $(EMU_DIR)/utility.c \
         $(EMU_DIR)/loadstore.c \
         $(EMU_DIR)/emulate.c
 
-ASM_SRCS := $(ASM_DIR)/assemble.c
+ASM_SRCS := $(ASM_DIR)/symbolTable.c \
+			$(ASM_DIR)/utilities.c \
+			$(ASM_DIR)/assemble.c
+
+
 
 EXT_SRCS := $(EXT_DIR)/morse.c
 
